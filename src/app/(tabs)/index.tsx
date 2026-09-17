@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Dimensions,
   Platform,
@@ -8,89 +8,49 @@ import {
   StyleSheet,
   Text,
   View,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/* =========================================================
-   MEDTRIX DESIGN SYSTEM
-========================================================= */
-
-const COLORS = {
-  background: '#050B16',
-  surface: '#0C1628',
-  surfaceElevated: '#101C30',
-  surfaceBlue: '#0E1D35',
-
-  border: '#1B2A42',
-  borderBlue: '#274873',
-
-  white: '#F7FAFF',
-  text: '#E9F0FB',
-  textSecondary: '#8D9BB0',
-  textMuted: '#607087',
-
-  blue: '#3478F6',
-  blueBright: '#4A8CFF',
-  blueDark: '#123064',
-
-  green: '#35D7A1',
-  greenDark: '#10352F',
-
-  yellow: '#F2B84B',
-  yellowDark: '#3A301D',
-
-  orange: '#F28B55',
-  orangeDark: '#3A261F',
-
-  red: '#EF5575',
-  redDark: '#3A1D2C',
-
-  purple: '#A995F5',
-  purpleDark: '#292445',
-
-  cyan: '#43C9E8',
-};
-
-/* =========================================================
-   MOCK DATA
-========================================================= */
-
+// Data Definitions matching EXACT request
 const inventoryStats = [
   {
     value: '1,248',
-    label: 'Total medicines',
+    label: 'TOTAL MEDICINES',
     footer: '+12 this week',
-    icon: 'medical-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.blueBright,
-    iconBackground: '#122C57',
+    icon: 'medical' as keyof typeof Ionicons.glyphMap,
+    color: '#2563EB',
+    bgColor: '#EFF6FF',
   },
   {
     value: '24',
-    label: 'Low stock',
+    label: 'LOW STOCK',
     footer: 'Needs attention',
-    icon: 'alert-circle-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.yellow,
-    iconBackground: COLORS.yellowDark,
+    icon: 'warning' as keyof typeof Ionicons.glyphMap,
+    color: '#F59E0B',
+    bgColor: '#FEF3C7',
   },
   {
     value: '18',
-    label: 'Expiring soon',
+    label: 'EXPIRING SOON',
     footer: 'Within 30 days',
-    icon: 'time-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.orange,
-    iconBackground: COLORS.orangeDark,
+    icon: 'time' as keyof typeof Ionicons.glyphMap,
+    color: '#F97316',
+    bgColor: '#FFEDD5',
   },
   {
     value: '07',
-    label: 'Out of stock',
+    label: 'OUT OF STOCK',
     footer: 'Action required',
-    icon: 'close-circle-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.red,
-    iconBackground: COLORS.redDark,
+    icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
+    color: '#E11D48',
+    bgColor: '#FFE4E6',
   },
 ];
 
@@ -99,19 +59,19 @@ const expiringMedicines = [
     name: 'Paracetamol 500mg',
     batch: 'BT-24081',
     days: 12,
-    progress: 82,
+    date: '12/2027',
   },
   {
     name: 'Amoxicillin 500mg',
-    batch: 'AM-19422',
-    days: 18,
-    progress: 64,
+    batch: 'AM-13622',
+    days: 16,
+    date: '16/2027',
   },
   {
     name: 'Cetirizine 10mg',
-    batch: 'CT-83104',
+    batch: 'CT-33104',
     days: 24,
-    progress: 48,
+    date: '24/2028',
   },
 ];
 
@@ -119,1760 +79,801 @@ const recentActivities = [
   {
     title: 'Medicine received',
     medicine: 'Paracetamol 500mg',
-    detail: '24 units added',
-    time: '10 min ago',
-    icon: 'arrow-down-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.green,
+    detail: '+24 units added to main store',
+    time: '2h ago',
+    icon: 'arrow-down' as keyof typeof Ionicons.glyphMap,
+    color: '#10B981',
+    bgColor: '#D1FAE5',
   },
   {
     title: 'Medicine issued',
     medicine: 'Amoxicillin 500mg',
-    detail: '12 units issued',
-    time: '35 min ago',
-    icon: 'arrow-up-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.blueBright,
+    detail: '12 units issued to Surgery Ward',
+    time: '5h ago',
+    icon: 'arrow-up' as keyof typeof Ionicons.glyphMap,
+    color: '#E11D48',
+    bgColor: '#FFE4E6',
   },
   {
-    title: 'Stock updated',
+    title: 'Stock adjusted',
     medicine: 'Cetirizine 10mg',
-    detail: 'Batch quantity updated',
-    time: '1 hour ago',
-    icon: 'sync-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.yellow,
+    detail: 'Quantity corrected post physical count',
+    time: '7h ago',
+    icon: 'sync' as keyof typeof Ionicons.glyphMap,
+    color: '#2563EB',
+    bgColor: '#EFF6FF',
   },
   {
-    title: 'Medicine scanned',
-    medicine: 'Azithromycin 250mg',
-    detail: 'New batch detected',
-    time: '2 hours ago',
-    icon: 'scan-outline' as keyof typeof Ionicons.glyphMap,
-    color: COLORS.cyan,
+    title: 'Medicine expensed',
+    medicine: 'Aspirin 325mg',
+    detail: 'New batch verified & registered',
+    time: '9h ago',
+    icon: 'checkmark-done' as keyof typeof Ionicons.glyphMap,
+    color: '#475569',
+    bgColor: '#F1F5F9',
   },
 ];
 
-/* =========================================================
-   SECTION HEADER
-========================================================= */
-
-type SectionHeaderProps = {
-  title: string;
-  action?: string;
-  onPress?: () => void;
-};
-
-function SectionHeader({
-  title,
-  action,
-  onPress,
-}: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-
-      {action && onPress ? (
-        <Pressable onPress={onPress} hitSlop={10}>
-          <Text style={styles.sectionAction}>{action}</Text>
-        </Pressable>
-      ) : action ? (
-        <Text style={styles.sectionAction}>{action}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-/* =========================================================
-   STAT CARD
-========================================================= */
-
-type StatCardProps = {
-  value: string;
-  label: string;
-  footer: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  iconBackground: string;
-};
-
-function StatCard({
-  value,
-  label,
-  footer,
-  icon,
-  color,
-  iconBackground,
-}: StatCardProps) {
-  return (
-    <View style={styles.statCard}>
-      <View
-        style={[
-          styles.statIcon,
-          {
-            backgroundColor: iconBackground,
-          },
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={21}
-          color={color}
-        />
-      </View>
-
-      <View style={styles.statMain}>
-        <Text style={styles.statValue}>{value}</Text>
-
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-
-      <View style={styles.statFooter}>
-        <View
-          style={[
-            styles.statFooterLine,
-            {
-              backgroundColor: color,
-            },
-          ]}
-        />
-
-        <Text style={styles.statFooterText}>
-          {footer}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-/* =========================================================
-   HOME SCREEN
-========================================================= */
+// Helper for Pressable animations
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function HomeScreen() {
-  const handleNotification = () => {
-    router.push('/alerts');
+  const handleNavigation = (route: string) => {
+    // @ts-ignore
+    router.push(route);
   };
 
-  const handleScan = () => {
-    router.push('/scan');
-  };
+  // Entrance Animations
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const greetingAnim = useRef(new Animated.Value(0)).current;
+  const scanAnim = useRef(new Animated.Value(0)).current;
+  const tacticalAnim = useRef(new Animated.Value(0)).current;
+  const kpiAnim = useRef(new Animated.Value(0)).current;
+  const expiringAnim = useRef(new Animated.Value(0)).current;
+  const activityAnim = useRef(new Animated.Value(0)).current;
 
-  const handleAlerts = () => {
-    router.push('/alerts');
-  };
+  // Pulse Animation for Smart Scan
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Staggered Entry
+    Animated.stagger(100, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(greetingAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(scanAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(tacticalAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(kpiAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(expiringAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(activityAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+
+    // Infinite Pulse Loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const getTransform = (animValue: Animated.Value, translateY = 20) => ({
+    opacity: animValue,
+    transform: [{
+      translateY: animValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: [translateY, 0],
+      })
+    }]
+  });
+
+  const getScale = (animValue: Animated.Value) => ({
+    opacity: animValue,
+    transform: [{
+      scale: animValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.95, 1],
+      })
+    }]
+  });
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top']}
-    >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FCFF" />
 
-      <View style={styles.screen}>
+      {/* Atmospheric Background Lighting */}
+      <View style={styles.ambientLightTop} pointerEvents="none" />
+      <View style={styles.ambientLightCenter} pointerEvents="none" />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* =====================================================
-            BACKGROUND ATMOSPHERE
+            1. MOBILE STATUS/HEADER AREA & 2. BRAND HEADER
         ===================================================== */}
-
-        <View style={styles.backgroundGlowTop} />
-
-        <View style={styles.backgroundGlowMiddle} />
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          bounces={true}
-        >
-          {/* =====================================================
-              HEADER
-          ===================================================== */}
-
-          <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <View style={styles.brandDot} />
-
-              <Text style={styles.brandName}>
-                MEDTRIX
-              </Text>
-
-              <View style={styles.brandDivider} />
-
-              <Text style={styles.brandCategory}>
-                HEALTHCARE
-              </Text>
+        <Animated.View style={[styles.header, getTransform(headerAnim, 10)]}>
+          <View style={styles.headerLeft}>
+            <View style={styles.logoBox}>
+              <MaterialCommunityIcons name="medical-bag" size={16} color="#FFFFFF" />
             </View>
-
-            <View style={styles.headerContent}>
-              <View style={styles.greetingContainer}>
-                <Text style={styles.greeting}>
-                  Good morning
-                </Text>
-
-                <Text style={styles.userName}>
-                  Kishore
-                </Text>
-
-                <Text style={styles.headerSubtitle}>
-                  Here's what's happening with your inventory
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={handleNotification}
-                accessibilityRole="button"
-                accessibilityLabel="Open alerts"
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.notificationButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.notificationButtonInner}>
-                  <Ionicons
-                    name="notifications-outline"
-                    size={23}
-                    color={COLORS.white}
-                  />
-
-                  <View style={styles.notificationIndicator} />
-                </View>
-              </Pressable>
+            <View>
+              <Text style={styles.brandName}>MEDTRIX</Text>
+              <Text style={styles.brandSub}>CLINICAL OPS</Text>
             </View>
           </View>
-
-          {/* =====================================================
-              SMART SCAN HERO
-          ===================================================== */}
-
-          <Pressable
-            onPress={handleScan}
-            accessibilityRole="button"
-            accessibilityLabel="Scan medicine"
-            style={({ pressed }) => [
-              styles.scanHero,
-              pressed && styles.scanHeroPressed,
-            ]}
-          >
-            {/* Decorative background */}
-            <View style={styles.scanGlow} />
-
-            <View style={styles.scanCircleLarge} />
-
-            <View style={styles.scanCircleSmall} />
-
-            {/* Scanner corner details */}
-            <View
-              style={[
-                styles.scannerCorner,
-                styles.scannerCornerTopLeft,
-              ]}
-            />
-
-            <View
-              style={[
-                styles.scannerCorner,
-                styles.scannerCornerTopRight,
-              ]}
-            />
-
-            <View
-              style={[
-                styles.scannerCorner,
-                styles.scannerCornerBottomLeft,
-              ]}
-            />
-
-            <View
-              style={[
-                styles.scannerCorner,
-                styles.scannerCornerBottomRight,
-              ]}
-            />
-
-            {/* Top */}
-            <View style={styles.scanTopRow}>
-              <View style={styles.scanIconOuter}>
-                <View style={styles.scanIconInner}>
-                  <Ionicons
-                    name="scan-outline"
-                    size={30}
-                    color={COLORS.white}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.smartScanBadge}>
-                <View style={styles.smartScanDot} />
-
-                <Text style={styles.smartScanText}>
-                  SMART SCAN
-                </Text>
-              </View>
-            </View>
-
-            {/* Main content */}
-            <View style={styles.scanTextBlock}>
-              <Text style={styles.scanEyebrow}>
-                INVENTORY INTELLIGENCE
-              </Text>
-
-              <Text style={styles.scanTitle}>
-                Scan medicine
-              </Text>
-
-              <Text style={styles.scanDescription}>
-                Identify medicine details instantly using
-                camera, barcode and OCR.
-              </Text>
-            </View>
-
-            {/* Bottom action */}
-            <View style={styles.scanActionRow}>
-              <View style={styles.scanActionText}>
-                <Text style={styles.scanActionTitle}>
-                  Start scanning
-                </Text>
-
-                <Text style={styles.scanActionSubtitle}>
-                  Fast · Accurate · Secure
-                </Text>
-              </View>
-
-              <View style={styles.scanArrowButton}>
-                <Ionicons
-                  name="arrow-forward"
-                  size={27}
-                  color={COLORS.white}
-                />
-              </View>
-            </View>
-          </Pressable>
-
-          {/* =====================================================
-              INVENTORY OVERVIEW
-          ===================================================== */}
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Inventory overview"
-            />
-
-            <View style={styles.statsGrid}>
-              {inventoryStats.map((stat) => (
-                <StatCard
-                  key={stat.label}
-                  {...stat}
-                />
-              ))}
-            </View>
-          </View>
-
-          {/* =====================================================
-              STOCK HEALTH
-          ===================================================== */}
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Stock health"
-              action="View report"
-            />
-
-            <View style={styles.stockCard}>
-              <View style={styles.stockHeader}>
-                <View>
-                  <Text style={styles.stockEyebrow}>
-                    CURRENT INVENTORY
-                  </Text>
-
-                  <View style={styles.stockValueRow}>
-                    <Text style={styles.stockValue}>
-                      72%
-                    </Text>
-
-                    <View style={styles.stockStatus}>
-                      <Ionicons
-                        name="trending-up"
-                        size={13}
-                        color={COLORS.green}
-                      />
-
-                      <Text style={styles.stockStatusText}>
-                        Healthy
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.stockIcon}>
-                  <Ionicons
-                    name="layers-outline"
-                    size={21}
-                    color={COLORS.blueBright}
-                  />
-                </View>
-              </View>
-
-              {/* Stock bar */}
-              <View style={styles.stockBar}>
-                <View
-                  style={[
-                    styles.stockBarHealthy,
-                    { width: '72%' },
-                  ]}
-                />
-
-                <View
-                  style={[
-                    styles.stockBarLow,
-                    { width: '18%' },
-                  ]}
-                />
-
-                <View
-                  style={[
-                    styles.stockBarEmpty,
-                    { width: '10%' },
-                  ]}
-                />
-              </View>
-
-              {/* Legend */}
-              <View style={styles.stockLegend}>
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor:
-                          COLORS.blueBright,
-                      },
-                    ]}
-                  />
-
-                  <Text style={styles.legendLabel}>
-                    Healthy
-                  </Text>
-
-                  <Text style={styles.legendValue}>
-                    72%
-                  </Text>
-                </View>
-
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor:
-                          COLORS.yellow,
-                      },
-                    ]}
-                  />
-
-                  <Text style={styles.legendLabel}>
-                    Low
-                  </Text>
-
-                  <Text style={styles.legendValue}>
-                    18%
-                  </Text>
-                </View>
-
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor:
-                          COLORS.red,
-                      },
-                    ]}
-                  />
-
-                  <Text style={styles.legendLabel}>
-                    Empty
-                  </Text>
-
-                  <Text style={styles.legendValue}>
-                    10%
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* =====================================================
-              EXPIRING SOON
-          ===================================================== */}
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Expiring soon"
-              action="View all"
-              onPress={handleAlerts}
-            />
-
-            <View style={styles.expiryCard}>
-              {/* Header */}
-              <View style={styles.expiryHeader}>
-                <View style={styles.expiryIcon}>
-                  <Ionicons
-                    name="time-outline"
-                    size={20}
-                    color={COLORS.orange}
-                  />
-                </View>
-
-                <View style={styles.expiryHeaderText}>
-                  <Text style={styles.expiryTitle}>
-                    18 medicines need attention
-                  </Text>
-
-                  <Text style={styles.expirySubtitle}>
-                    Review batches approaching their expiry
-                    date.
-                  </Text>
-                </View>
-              </View>
-
-              {/* Medicines */}
-              <View style={styles.expiryList}>
-                {expiringMedicines.map(
-                  (medicine, index) => (
-                    <View
-                      key={medicine.batch}
-                      style={[
-                        styles.expiryItem,
-                        index <
-                          expiringMedicines.length - 1 &&
-                          styles.expiryItemBorder,
-                      ]}
-                    >
-                      <View style={styles.medicineIcon}>
-                        <Ionicons
-                          name="medical-outline"
-                          size={17}
-                          color={COLORS.textSecondary}
-                        />
-                      </View>
-
-                      <View style={styles.medicineInfo}>
-                        <Text
-                          style={styles.medicineName}
-                          numberOfLines={1}
-                        >
-                          {medicine.name}
-                        </Text>
-
-                        <Text style={styles.medicineBatch}>
-                          Batch {medicine.batch}
-                        </Text>
-
-                        <View style={styles.expiryProgressTrack}>
-                          <View
-                            style={[
-                              styles.expiryProgressFill,
-                              {
-                                width: `${medicine.progress}%`,
-                              },
-                            ]}
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.daysContainer}>
-                        <Text style={styles.daysNumber}>
-                          {medicine.days}
-                        </Text>
-
-                        <Text style={styles.daysLabel}>
-                          days
-                        </Text>
-                      </View>
-                    </View>
-                  ),
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* =====================================================
-              RECENT ACTIVITY
-          ===================================================== */}
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Recent activity"
-              action="View all"
-            />
-
-            <View style={styles.activityCard}>
-              {recentActivities.map(
-                (activity, index) => {
-                  const isLast =
-                    index === recentActivities.length - 1;
-
-                  return (
-                    <View
-                      key={`${activity.title}-${activity.time}`}
-                      style={styles.activityItem}
-                    >
-                      <View style={styles.activityTimeline}>
-                        <View
-                          style={[
-                            styles.activityIcon,
-                            {
-                              backgroundColor:
-                                activity.color + '18',
-                              borderColor:
-                                activity.color + '35',
-                            },
-                          ]}
-                        >
-                          <Ionicons
-                            name={activity.icon}
-                            size={16}
-                            color={activity.color}
-                          />
-                        </View>
-
-                        {!isLast && (
-                          <View
-                            style={styles.timelineLine}
-                          />
-                        )}
-                      </View>
-
-                      <View
-                        style={[
-                          styles.activityContent,
-                          !isLast &&
-                            styles.activityContentBorder,
-                        ]}
-                      >
-                        <View style={styles.activityTop}>
-                          <Text
-                            style={styles.activityTitle}
-                            numberOfLines={1}
-                          >
-                            {activity.title}
-                          </Text>
-
-                          <Text style={styles.activityTime}>
-                            {activity.time}
-                          </Text>
-                        </View>
-
-                        <Text
-                          style={styles.activityMedicine}
-                          numberOfLines={1}
-                        >
-                          {activity.medicine}
-                        </Text>
-
-                        <Text style={styles.activityDetail}>
-                          {activity.detail}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                },
-              )}
-            </View>
-          </View>
-
-          {/* =====================================================
-              QUICK ACTIONS
-          ===================================================== */}
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Quick actions"
-            />
-
-            {/* Main action */}
-            <Pressable
-              onPress={handleScan}
-              accessibilityRole="button"
-              accessibilityLabel="Scan medicine"
-              style={({ pressed }) => [
-                styles.primaryAction,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.primaryActionIcon}>
-                <Ionicons
-                  name="scan-outline"
-                  size={22}
-                  color={COLORS.white}
-                />
-              </View>
-
-              <View style={styles.primaryActionText}>
-                <Text style={styles.primaryActionTitle}>
-                  Scan medicine
-                </Text>
-
-                <Text style={styles.primaryActionSubtitle}>
-                  Add or identify stock
-                </Text>
-              </View>
-
-              <Ionicons
-                name="arrow-forward"
-                size={19}
-                color={COLORS.white}
-              />
+          
+          <View style={styles.headerRight}>
+            <Pressable style={styles.headerGlassButton}>
+              <Ionicons name="search" size={18} color="#0F172A" />
             </Pressable>
+            <Pressable style={styles.headerGlassButton}>
+              <Ionicons name="notifications-outline" size={18} color="#0F172A" />
+              <View style={styles.notificationDot} />
+            </Pressable>
+            <Pressable style={styles.headerGlassButton} onPress={() => handleNavigation('/profile')}>
+              <Ionicons name="person-outline" size={18} color="#0F172A" />
+            </Pressable>
+          </View>
+        </Animated.View>
 
-            {/* Secondary actions */}
-            <View style={styles.secondaryActions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryAction,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.secondaryActionIcon,
-                    {
-                      backgroundColor: '#122C57',
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="add-outline"
-                    size={21}
-                    color={COLORS.blueBright}
-                  />
-                </View>
-
-                <Text style={styles.secondaryActionText}>
-                  Add stock
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryAction,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.secondaryActionIcon,
-                    {
-                      backgroundColor: COLORS.greenDark,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="arrow-up-outline"
-                    size={21}
-                    color={COLORS.green}
-                  />
-                </View>
-
-                <Text style={styles.secondaryActionText}>
-                  Issue stock
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryAction,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.secondaryActionIcon,
-                    {
-                      backgroundColor: COLORS.purpleDark,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="document-text-outline"
-                    size={20}
-                    color={COLORS.purple}
-                  />
-                </View>
-
-                <Text style={styles.secondaryActionText}>
-                  Reports
-                </Text>
-              </Pressable>
+        {/* =====================================================
+            3. GREETING & 4. DATE CARD
+        ===================================================== */}
+        <Animated.View style={[styles.greetingSection, getTransform(greetingAnim)]}>
+          <View style={styles.greetingLeft}>
+            <View style={styles.liveIndicatorRow}>
+              <Text style={styles.greetingLabel}>GOOD MORNING</Text>
+              <View style={styles.liveBadge}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>Live</Text>
+              </View>
             </View>
+            <Text style={styles.greetingName}>Kishore</Text>
+            <Text style={styles.greetingDesc}>Real-time medicine inventory overview</Text>
           </View>
 
-          {/* =====================================================
-              FOOTER
-          ===================================================== */}
+          <View style={styles.dateCard}>
+            <Ionicons name="calendar-outline" size={14} color="#64748B" />
+            <View style={{ marginLeft: 6 }}>
+              <Text style={styles.dateDay}>THU, APR 24</Text>
+              <Text style={styles.dateTime}>09:41 AM</Text>
+            </View>
+          </View>
+        </Animated.View>
 
-          <View style={styles.footer}>
-            <View style={styles.footerLine} />
-
-            <View style={styles.footerBrand}>
-              <View style={styles.footerDot} />
-
-              <Text style={styles.footerBrandText}>
-                MEDTRIX HEALTHCARE
+        {/* =====================================================
+            5. SMART SCAN OCR HERO
+        ===================================================== */}
+        <Animated.View style={[styles.heroCard, getScale(scanAnim)]}>
+          <View style={styles.heroTop}>
+            <View>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>✦ SMART SCAN OCR</Text>
+              </View>
+              <Text style={styles.heroTitle}>Scan medicine</Text>
+              <Text style={styles.heroDesc}>
+                Extract medicine batch, expiry, and dosage{'\n'}details instantly using camera-based OCR.
               </Text>
             </View>
-
-            <Text style={styles.footerSubtitle}>
-              Inventory intelligence
-            </Text>
+            <Animated.View style={[
+              styles.scannerIconWrapper,
+              {
+                opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0.8] }),
+                transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }]
+              }
+            ]}>
+              <Ionicons name="scan" size={36} color="#60A5FA" />
+            </Animated.View>
           </View>
-        </ScrollView>
-      </View>
+          
+          <Pressable 
+            style={({ pressed }) => [styles.scanButton, pressed && { transform: [{ scale: 0.97 }] }]}
+            onPress={() => handleNavigation('/scan')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="scan-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.scanButtonText}>Start scanning</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          </Pressable>
+        </Animated.View>
+
+        {/* =====================================================
+            6. TACTICAL ACTIONS
+        ===================================================== */}
+        <Animated.View style={[styles.sectionContainer, getTransform(tacticalAnim)]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>TACTICAL ACTIONS</Text>
+            <Text style={styles.viewAllText}>View All →</Text>
+          </View>
+          
+          <View style={styles.tacticalGrid}>
+            {[
+              { label: 'Scan', icon: 'scan', color: '#2563EB', route: '/scan' },
+              { label: 'Receive', icon: 'download-outline', color: '#10B981', route: '/inventory' },
+              { label: 'Issue', icon: 'push-outline', color: '#E11D48', route: '/inventory' },
+              { label: 'Reports', icon: 'bar-chart-outline', color: '#475569', route: '/inventory' },
+            ].map((action, idx) => (
+              <Pressable 
+                key={idx} 
+                style={({ pressed }) => [styles.tacticalCard, pressed && { transform: [{ scale: 0.97 }] }]}
+                onPress={() => handleNavigation(action.route)}
+              >
+                <Ionicons name={action.icon as any} size={20} color={action.color} style={{ marginBottom: 6 }} />
+                <Text style={styles.tacticalLabel}>{action.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* =====================================================
+            7. INVENTORY OVERVIEW
+        ===================================================== */}
+        <Animated.View style={[styles.sectionContainer, getTransform(kpiAnim)]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitleCapitalized}>Inventory overview</Text>
+            <Text style={styles.viewAllText}>View All →</Text>
+          </View>
+          
+          <View style={styles.kpiGrid}>
+            {inventoryStats.map((stat, idx) => (
+              <View key={idx} style={styles.kpiCard}>
+                <View style={[styles.kpiIconBox, { backgroundColor: stat.bgColor }]}>
+                  <Ionicons name={stat.icon} size={16} color={stat.color} />
+                </View>
+                <Text style={styles.kpiLabel}>{stat.label}</Text>
+                <Text style={[styles.kpiValue, { color: stat.color }]}>{stat.value}</Text>
+                <Text style={[styles.kpiFooter, { color: stat.color }]}>{stat.footer}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* =====================================================
+            8. EXPIRING SOON
+        ===================================================== */}
+        <Animated.View style={[styles.sectionContainer, getTransform(expiringAnim)]}>
+          <View style={styles.sectionHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.sectionTitleCapitalized}>Expiring soon</Text>
+              <View style={styles.alertBadge}>
+                <Text style={styles.alertBadgeText}>⚠ ALERTS</Text>
+              </View>
+            </View>
+            <Pressable onPress={() => handleNavigation('/alerts')}>
+              <Text style={styles.viewAllText}>View All →</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.glassContainer}>
+            {expiringMedicines.map((med, idx) => (
+              <View key={idx} style={[styles.listRow, idx === expiringMedicines.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={styles.listIconBox}>
+                  <MaterialCommunityIcons name="pill" size={18} color="#64748B" />
+                </View>
+                <View style={styles.listContent}>
+                  <Text style={styles.listTitle}>{med.name}</Text>
+                  <Text style={styles.listSubtitle}>Batch {med.batch}</Text>
+                </View>
+                <View style={styles.listRight}>
+                  <View style={styles.expiryPill}>
+                    <Text style={styles.expiryPillText}>{med.days} days</Text>
+                  </View>
+                  <Text style={styles.expiryDate}>EXP: {med.date}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" style={{ marginLeft: 8 }} />
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* =====================================================
+            9. RECENT ACTIVITY
+        ===================================================== */}
+        <Animated.View style={[styles.sectionContainer, getTransform(activityAnim)]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitleCapitalized}>Recent activity</Text>
+            <Text style={styles.viewAllText}>View All →</Text>
+          </View>
+
+          <View style={styles.glassContainer}>
+            {recentActivities.map((act, idx) => (
+              <View key={idx} style={[styles.timelineRow, idx === recentActivities.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={[styles.timelineIconBox, { backgroundColor: act.bgColor }]}>
+                  <Ionicons name={act.icon} size={14} color={act.color} />
+                </View>
+                <View style={styles.timelineContent}>
+                  <Text style={styles.timelineTitle}>{act.title}</Text>
+                  <Text style={styles.timelineMedicine}>{act.medicine}</Text>
+                  <Text style={styles.timelineDetail}>{act.detail}</Text>
+                </View>
+                <Text style={styles.timelineTime}>{act.time}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* =====================================================
+            10. AUDIT TRAIL STATUS
+        ===================================================== */}
+        <Animated.View style={[styles.auditContainer, getTransform(activityAnim, 30)]}>
+          <Ionicons name="shield-checkmark" size={14} color="#10B981" />
+          <Text style={styles.auditText}>Audit trail active • Synchronized</Text>
+        </Animated.View>
+
+        {/* Bottom padding for fixed navigation */}
+        <View style={{ height: 120 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* =========================================================
-   STYLES
-========================================================= */
+// --------------------------------------------------------
+// STYLES
+// --------------------------------------------------------
 
 const styles = StyleSheet.create({
-  /* =========================================================
-     ROOT
-  ========================================================= */
-
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FCFF',
   },
-
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'android' ? 8 : 4,
-    paddingBottom: 40,
-  },
-
-  /* =========================================================
-     BACKGROUND
-  ========================================================= */
-
-  backgroundGlowTop: {
+  // AMBIENT BACKGROUND
+  ambientLightTop: {
     position: 'absolute',
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: '#0A1B38',
-    opacity: 0.42,
-    top: -205,
-    right: -180,
+    top: -50,
+    right: -50,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#EEF7FF',
+    filter: 'blur(40px)', // web only, subtle effect
+    opacity: 0.8,
   },
-
-  backgroundGlowMiddle: {
+  ambientLightCenter: {
     position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#07162D',
+    top: '30%',
+    left: -100,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#EAF4FC',
+    filter: 'blur(50px)',
     opacity: 0.6,
-    top: 490,
-    left: -205,
   },
-
-  /* =========================================================
-     HEADER
-  ========================================================= */
-
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  // HEADER
   header: {
-    marginTop: 10,
-    marginBottom: 27,
-  },
-
-  brandRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 27,
-  },
-
-  brandDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.green,
-    marginRight: 9,
-  },
-
-  brandName: {
-    color: '#8190A7',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 2.4,
-  },
-
-  brandDivider: {
-    width: 1,
-    height: 13,
-    backgroundColor: '#29384E',
-    marginHorizontal: 10,
-  },
-
-  brandCategory: {
-    color: '#4D5D73',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.7,
-  },
-
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-  },
-
-  greetingContainer: {
-    flex: 1,
-    paddingRight: 12,
-  },
-
-  greeting: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 3,
-  },
-
-  userName: {
-    color: COLORS.white,
-    fontSize: SCREEN_WIDTH >= 400 ? 41 : 38,
-    lineHeight: SCREEN_WIDTH >= 400 ? 47 : 44,
-    fontWeight: '800',
-    letterSpacing: -1.2,
-  },
-
-  headerSubtitle: {
-    color: '#66758C',
-    fontSize: 14,
-    lineHeight: 21,
-    fontWeight: '500',
-    marginTop: 8,
-    maxWidth: 310,
-  },
-
-  notificationButton: {
-    width: 59,
-    height: 59,
-    borderRadius: 30,
-    backgroundColor: '#101B2D',
-    borderWidth: 1,
-    borderColor: '#26364E',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
+    marginBottom: 20,
   },
-
-  notificationButtonInner: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: '#17243A',
-    borderWidth: 1,
-    borderColor: '#30405A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  notificationIndicator: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.red,
-    right: 9,
-    top: 8,
-  },
-
-  /* =========================================================
-     SMART SCAN
-  ========================================================= */
-
-  scanHero: {
-    minHeight: 325,
-    borderRadius: 27,
-    backgroundColor: '#0D1A30',
-    borderWidth: 1,
-    borderColor: COLORS.borderBlue,
-    padding: 26,
-    marginBottom: 31,
-    overflow: 'hidden',
-  },
-
-  scanHeroPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.993 }],
-  },
-
-  scanGlow: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#173D72',
-    opacity: 0.16,
-    right: -80,
-    top: -90,
-  },
-
-  scanCircleLarge: {
-    position: 'absolute',
-    width: 335,
-    height: 335,
-    borderRadius: 168,
-    borderWidth: 1,
-    borderColor: '#27476E',
-    opacity: 0.27,
-    right: -170,
-    bottom: -210,
-  },
-
-  scanCircleSmall: {
-    position: 'absolute',
-    width: 205,
-    height: 205,
-    borderRadius: 103,
-    borderWidth: 1,
-    borderColor: '#315985',
-    opacity: 0.22,
-    right: -82,
-    bottom: -95,
-  },
-
-  scannerCorner: {
-    position: 'absolute',
-    width: 19,
-    height: 19,
-    borderColor: '#4A78B5',
-    opacity: 0.7,
-  },
-
-  scannerCornerTopLeft: {
-    top: 15,
-    left: 15,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderTopLeftRadius: 6,
-  },
-
-  scannerCornerTopRight: {
-    top: 15,
-    right: 15,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderTopRightRadius: 6,
-  },
-
-  scannerCornerBottomLeft: {
-    bottom: 15,
-    left: 15,
-    borderBottomWidth: 1,
-    borderLeftWidth: 1,
-    borderBottomLeftRadius: 6,
-  },
-
-  scannerCornerBottomRight: {
-    bottom: 15,
-    right: 15,
-    borderBottomWidth: 1,
-    borderRightWidth: 1,
-    borderBottomRightRadius: 6,
-  },
-
-  scanTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  scanIconOuter: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: '#102B54',
-    borderWidth: 1,
-    borderColor: '#244A7E',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  scanIconInner: {
-    width: 54,
-    height: 54,
-    borderRadius: 17,
-    backgroundColor: COLORS.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.blue,
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 13,
-    elevation: 7,
-  },
-
-  smartScanBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#123638',
-    borderWidth: 1,
-    borderColor: '#236361',
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-  },
-
-  smartScanDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.green,
-    marginRight: 7,
-  },
-
-  smartScanText: {
-    color: '#70E6C2',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-
-  scanTextBlock: {
-    marginTop: 37,
-  },
-
-  scanEyebrow: {
-    color: '#5D99FF',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    marginBottom: 9,
-  },
-
-  scanTitle: {
-    color: COLORS.white,
-    fontSize: 34,
-    lineHeight: 41,
-    fontWeight: '800',
-    letterSpacing: -0.9,
-  },
-
-  scanDescription: {
-    color: '#8998AE',
-    fontSize: 15,
-    lineHeight: 23,
-    fontWeight: '500',
-    maxWidth: 320,
-    marginTop: 8,
-  },
-
-  scanActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 23,
-  },
-
-  scanActionText: {
-    flex: 1,
-  },
-
-  scanActionTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 3,
-  },
-
-  scanActionSubtitle: {
-    color: '#61728B',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-
-  scanArrowButton: {
-    width: 57,
-    height: 57,
-    borderRadius: 18,
-    backgroundColor: COLORS.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.blue,
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.35,
-    shadowRadius: 13,
-    elevation: 7,
-  },
-
-  /* =========================================================
-     SECTIONS
-  ========================================================= */
-
-  section: {
-    marginBottom: 30,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: COLORS.white,
-    fontSize: 21,
-    fontWeight: '700',
-    letterSpacing: -0.35,
-  },
-
-  sectionAction: {
-    color: '#5E99FF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  /* =========================================================
-     INVENTORY STATISTICS
-  ========================================================= */
-
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 12,
-  },
-
-  statCard: {
-    width: '48.3%',
-    height: 174,
-    borderRadius: 22,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 17,
-    justifyContent: 'space-between',
-  },
-
-  statIcon: {
-    width: 49,
-    height: 49,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statMain: {
-    marginTop: 9,
-  },
-
-  statValue: {
-    color: COLORS.white,
-    fontSize: 30,
-    lineHeight: 35,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-  },
-
-  statLabel: {
-    color: '#8392A8',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-
-  statFooter: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  statFooterLine: {
-    width: 22,
-    height: 3,
-    borderRadius: 2,
-    marginRight: 7,
-  },
-
-  statFooterText: {
-    color: '#52637A',
-    fontSize: 9,
-    fontWeight: '600',
-  },
-
-  /* =========================================================
-     STOCK HEALTH
-  ========================================================= */
-
-  stockCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 20,
-  },
-
-  stockHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-
-  stockEyebrow: {
-    color: '#60718A',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-
-  stockValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-
-  stockValue: {
-    color: COLORS.white,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.6,
-  },
-
-  stockStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.greenDark,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    marginLeft: 9,
-  },
-
-  stockStatusText: {
-    color: COLORS.green,
-    fontSize: 9,
-    fontWeight: '700',
-    marginLeft: 3,
-  },
-
-  stockIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 14,
-    backgroundColor: '#10274A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  stockBar: {
-    height: 9,
-    width: '100%',
-    flexDirection: 'row',
+  logoBox: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#2563EB',
     borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#182235',
-    marginTop: 22,
-  },
-
-  stockBarHealthy: {
-    height: '100%',
-    backgroundColor: COLORS.blueBright,
-  },
-
-  stockBarLow: {
-    height: '100%',
-    backgroundColor: COLORS.yellow,
-    marginLeft: 2,
-  },
-
-  stockBarEmpty: {
-    height: '100%',
-    backgroundColor: COLORS.red,
-    marginLeft: 2,
-  },
-
-  stockLegend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 17,
-  },
-
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  legendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-
-  legendLabel: {
-    color: '#64748B',
-    fontSize: 9,
-    fontWeight: '600',
-  },
-
-  legendValue: {
-    color: '#9BA8BA',
-    fontSize: 9,
-    fontWeight: '700',
-    marginLeft: 4,
-  },
-
-  /* =========================================================
-     EXPIRING MEDICINES
-  ========================================================= */
-
-  expiryCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-  },
-
-  expiryHeader: {
-    flexDirection: 'row',
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#18263B',
-  },
-
-  expiryIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: COLORS.orangeDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 11,
-  },
-
-  expiryHeaderText: {
-    flex: 1,
-  },
-
-  expiryTitle: {
-    color: COLORS.text,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-
-  expirySubtitle: {
-    color: '#65758C',
-    fontSize: 10,
-    lineHeight: 16,
-    fontWeight: '500',
-  },
-
-  expiryList: {
-    paddingHorizontal: 18,
-  },
-
-  expiryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-  },
-
-  expiryItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#17253A',
-  },
-
-  medicineIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#111E31',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    ...SHADOWS.soft,
   },
-
-  medicineInfo: {
-    flex: 1,
-    minWidth: 0,
+  brandName: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 16,
+    color: '#0F172A',
+    letterSpacing: 0.5,
   },
-
-  medicineName: {
-    color: '#DDE6F3',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  medicineBatch: {
-    color: '#596A82',
+  brandSub: {
+    fontFamily: 'Jakarta-Medium',
     fontSize: 9,
-    fontWeight: '600',
-    marginTop: 3,
+    color: '#64748B',
+    letterSpacing: 0.8,
   },
-
-  expiryProgressTrack: {
-    width: '88%',
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: '#1A2638',
-    overflow: 'hidden',
-    marginTop: 7,
-  },
-
-  expiryProgressFill: {
-    height: '100%',
-    backgroundColor: COLORS.orange,
-    borderRadius: 2,
-  },
-
-  daysContainer: {
-    width: 42,
-    alignItems: 'flex-end',
-    marginLeft: 8,
-  },
-
-  daysNumber: {
-    color: COLORS.orange,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
-  daysLabel: {
-    color: '#596A82',
-    fontSize: 8,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-
-  /* =========================================================
-     RECENT ACTIVITY
-  ========================================================= */
-
-  activityCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 17,
-    paddingVertical: 5,
-  },
-
-  activityItem: {
+  headerRight: {
     flexDirection: 'row',
-    minHeight: 83,
   },
-
-  activityTimeline: {
+  headerGlassButton: {
     width: 40,
-    alignItems: 'center',
-    position: 'relative',
-  },
-
-  activityIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 12,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.80)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
-    zIndex: 2,
+    marginLeft: 8,
+    ...SHADOWS.soft,
   },
-
-  timelineLine: {
+  notificationDot: {
     position: 'absolute',
-    width: 1,
-    backgroundColor: '#1B2A40',
-    top: 49,
-    bottom: 0,
+    top: 10,
+    right: 10,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E11D48',
   },
-
-  activityContent: {
+  // GREETING
+  greetingSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 22,
+    flexWrap: 'wrap',
+  },
+  greetingLeft: {
     flex: 1,
-    paddingLeft: 11,
-    paddingVertical: 14,
+    minWidth: 200,
   },
-
-  activityContentBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#17253A',
+  liveIndicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-
-  activityTop: {
+  greetingLabel: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 10,
+    color: '#0284C7',
+    letterSpacing: 1,
+    marginRight: 10,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 4,
+  },
+  liveText: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 9,
+    color: '#10B981',
+  },
+  greetingName: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 28,
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  greetingDesc: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 13,
+    color: '#64748B',
+  },
+  dateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.80)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: Platform.OS === 'web' ? 0 : 4,
+    ...SHADOWS.soft,
+  },
+  dateDay: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 10,
+    color: '#0F172A',
+  },
+  dateTime: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 10,
+    color: '#64748B',
+  },
+  // SMART SCAN HERO (LEVEL 1)
+  heroCard: {
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.80)',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  heroBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  heroBadgeText: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 9,
+    color: '#2563EB',
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 24,
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  heroDesc: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  scannerIconWrapper: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanButton: {
+    height: 48,
+    backgroundColor: '#172B4D',
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    shadowColor: '#172B4D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
-
-  activityTitle: {
-    flex: 1,
-    color: '#DCE5F2',
-    fontSize: 11,
-    fontWeight: '700',
-    marginRight: 8,
+  scanButtonText: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 15,
+    color: '#FFFFFF',
   },
-
-  activityTime: {
-    color: '#506078',
-    fontSize: 8,
-    fontWeight: '600',
+  // SECTIONS
+  sectionContainer: {
+    marginBottom: 22,
   },
-
-  activityMedicine: {
-    color: '#8493A9',
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontFamily: 'Jakarta-Bold',
     fontSize: 10,
-    fontWeight: '600',
-    marginTop: 4,
+    color: '#64748B',
+    letterSpacing: 1,
   },
-
-  activityDetail: {
-    color: '#52647D',
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 2,
+  sectionTitleCapitalized: {
+    fontFamily: 'Outfit-Medium',
+    fontSize: 18,
+    color: '#0F172A',
   },
-
-  /* =========================================================
-     QUICK ACTIONS
-  ========================================================= */
-
-  primaryAction: {
-    minHeight: 75,
-    borderRadius: 20,
-    backgroundColor: COLORS.blueDark,
+  viewAllText: {
+    fontFamily: 'Jakarta-SemiBold',
+    fontSize: 12,
+    color: '#2563EB',
+  },
+  // TACTICAL
+  tacticalGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tacticalCard: {
+    flex: 1,
+    height: 76,
+    backgroundColor: 'rgba(255,255,255,0.5)',
     borderWidth: 1,
-    borderColor: '#245397',
-    paddingHorizontal: 15,
+    borderColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+    ...SHADOWS.soft,
+  },
+  tacticalLabel: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 11,
+    color: '#475569',
+  },
+  // KPI
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  kpiCard: {
+    width: (SCREEN_WIDTH - 32 - 12) / 2,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.78)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    ...SHADOWS.soft,
+  },
+  kpiIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  kpiLabel: {
+    fontFamily: 'Jakarta-SemiBold',
+    fontSize: 11,
+    color: '#64748B',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  kpiValue: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  kpiFooter: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 11,
+  },
+  // EXPIRING SOON & TIMELINE (LEVEL 2 GLASS CONTAINER)
+  alertBadge: {
+    backgroundColor: '#FFE4E6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  alertBadgeText: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 8,
+    color: '#E11D48',
+    letterSpacing: 0.5,
+  },
+  glassContainer: {
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.78)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    ...SHADOWS.soft,
+  },
+  listRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
-
-  primaryActionIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#2D6FE9',
+  listIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-
-  primaryActionText: {
+  listContent: {
     flex: 1,
   },
-
-  primaryActionTitle: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '700',
+  listTitle: {
+    fontFamily: 'Jakarta-SemiBold',
+    fontSize: 14,
+    color: '#0F172A',
+    marginBottom: 2,
   },
-
-  primaryActionSubtitle: {
-    color: '#7594C4',
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 3,
+  listSubtitle: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 11,
+    color: '#64748B',
   },
-
-  secondaryActions: {
+  listRight: {
+    alignItems: 'flex-end',
+  },
+  expiryPill: {
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  expiryPillText: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 10,
+    color: '#F97316',
+  },
+  expiryDate: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 10,
+    color: '#64748B',
+  },
+  // RECENT ACTIVITY
+  timelineRow: {
     flexDirection: 'row',
-    gap: 9,
-    marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
-
-  secondaryAction: {
-    flex: 1,
-    minHeight: 91,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 12,
-    justifyContent: 'space-between',
-  },
-
-  secondaryActionIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 11,
+  timelineIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-
-  secondaryActionText: {
-    color: '#8695AA',
-    fontSize: 9,
-    fontWeight: '700',
+  timelineContent: {
+    flex: 1,
   },
-
-  /* =========================================================
-     FOOTER
-  ========================================================= */
-
-  footer: {
-    alignItems: 'center',
+  timelineTitle: {
+    fontFamily: 'Jakarta-SemiBold',
+    fontSize: 12,
+    color: '#475569',
+    marginBottom: 2,
+  },
+  timelineMedicine: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 14,
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  timelineDetail: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 12,
+    color: '#64748B',
+  },
+  timelineTime: {
+    fontFamily: 'JetBrainsMono-Regular',
+    fontSize: 11,
+    color: '#94A3B8',
+    alignSelf: 'flex-start',
     marginTop: 2,
-    paddingBottom: 10,
   },
-
-  footerLine: {
-    width: 42,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: '#1D2E47',
-    marginBottom: 14,
-  },
-
-  footerBrand: {
+  // AUDIT STATUS
+  auditContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.75)',
+    borderRadius: 20,
+    height: 38,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    ...SHADOWS.soft,
   },
-
-  footerDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.green,
-    marginRight: 6,
-  },
-
-  footerBrandText: {
-    color: '#45556D',
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-
-  footerSubtitle: {
-    color: '#2F3D52',
-    fontSize: 8,
-    fontWeight: '500',
-    marginTop: 5,
-  },
-
-  /* =========================================================
-     INTERACTION
-  ========================================================= */
-
-  pressed: {
-    opacity: 0.72,
+  auditText: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 12,
+    color: '#10B981',
+    marginLeft: 6,
   },
 });

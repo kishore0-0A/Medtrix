@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -8,6 +8,7 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { Auth, Biometric } from '../supabase';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,13 +20,34 @@ export default function RootLayout() {
     'Jakarta-Bold': PlusJakartaSans_700Bold,
   });
 
+  const [authChecked, setAuthChecked] = useState(false);
+
   useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
+    async function checkAuthAndRoute() {
+      if (!loaded && !error) return; // Wait until fonts load
+      
+      try {
+        const session = await Auth.getSession();
+        if (session) {
+          const isBiometricEnabled = await Biometric.isBiometricEnabled();
+          if (isBiometricEnabled) {
+            router.replace('/auth/biometric');
+          } else {
+            router.replace('/(tabs)');
+          }
+        }
+      } catch (err) {
+        console.warn('Auth check error:', err);
+      } finally {
+        setAuthChecked(true);
+        SplashScreen.hideAsync();
+      }
     }
+    
+    checkAuthAndRoute();
   }, [loaded, error]);
 
-  if (!loaded && !error) {
+  if (!loaded || !authChecked) {
     return null;
   }
 
