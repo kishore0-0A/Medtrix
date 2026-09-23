@@ -34,12 +34,6 @@
           "imageWidth": 76
         }
       ],
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Medtrix uses Face ID to securely unlock your account on this device."
-        }
-      ],
       "expo-secure-store"
     ],
     "experiments": {

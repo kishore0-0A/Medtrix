@@ -13,8 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
 import { router } from 'expo-router';
-import { Auth, Biometric } from '../../supabase';
-
+import { Auth } from '../../supabase';
 const SETTINGS_GROUPS = [
   {
     title: 'Account',
@@ -27,7 +26,6 @@ const SETTINGS_GROUPS = [
     title: 'Security',
     items: [
       { id: '3', icon: 'lock-closed-outline', label: 'Change Password' },
-      { id: '4', icon: 'finger-print-outline', label: 'Biometric Login', type: 'toggle', value: true },
     ],
   },
   {
@@ -44,36 +42,13 @@ export default function ProfileScreen() {
     '4': false,
     '5': true,
   });
-  const [bioLabel, setBioLabel] = React.useState('Biometric Login');
-
   React.useEffect(() => {
-    async function loadSettings() {
-      const enabled = await Biometric.isBiometricEnabled();
-      setToggles(prev => ({ ...prev, '4': enabled }));
-      
-      const label = await Biometric.getBiometricLabel();
-      setBioLabel(`${label} Login`);
-    }
-    loadSettings();
+    // Other settings loads could go here
   }, []);
 
   const toggleSwitch = async (id: string) => {
     const newValue = !toggles[id];
     setToggles(prev => ({ ...prev, [id]: newValue }));
-    
-    if (id === '4') {
-      if (newValue) {
-        const result = await Biometric.authenticateWithBiometrics('Verify to enable quick login');
-        if (result.success) {
-          await Biometric.enableBiometricLogin();
-        } else {
-          setToggles(prev => ({ ...prev, '4': false })); // Revert visually
-          Alert.alert('Setup Failed', result.error);
-        }
-      } else {
-        await Biometric.disableBiometricLogin();
-      }
-    }
   };
 
   const handleLogout = async () => {
@@ -116,10 +91,9 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.settingRowLeft}>
                     <Ionicons name={item.icon as any} size={20} color={COLORS.text.secondary} style={styles.settingIcon} />
-                    <Text style={styles.settingLabel}>{item.id === '4' ? bioLabel : item.label}</Text>
+                    <Text style={styles.settingLabel}>{item.label}</Text>
                   </View>
-                  
-                  {item.type === 'toggle' ? (
+                  {(item as any).type === 'toggle' ? (
                     <Switch
                       trackColor={{ false: COLORS.border.subtle, true: COLORS.brand.primary }}
                       thumbColor="#FFFFFF"

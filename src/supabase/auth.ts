@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export const AuthHelpers = {
   async signUp(email: string, password: string, name?: string) {
@@ -32,7 +33,7 @@ export const AuthHelpers = {
     return session;
   },
 
-  onAuthStateChange(callback: (event: string, session: any) => void) {
+  onAuthStateChange(callback: (event: AuthChangeEvent, session: Session | null) => void) {
     const { data } = supabase.auth.onAuthStateChange(callback);
     return data.subscription;
   },

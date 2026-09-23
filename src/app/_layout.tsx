@@ -8,8 +8,7 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { Auth, Biometric } from '../supabase';
-
+import { Auth } from '../supabase';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -29,12 +28,7 @@ export default function RootLayout() {
       try {
         const session = await Auth.getSession();
         if (session) {
-          const isBiometricEnabled = await Biometric.isBiometricEnabled();
-          if (isBiometricEnabled) {
-            router.replace('/auth/biometric');
-          } else {
-            router.replace('/(tabs)');
-          }
+          router.replace('/(tabs)');
         }
       } catch (err) {
         console.warn('Auth check error:', err);

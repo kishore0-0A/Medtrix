@@ -1,57 +1,87 @@
 import React, { useState } from 'react';
+
 import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY, GLASS, SHADOWS } from '../../theme';
+
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 import { Auth } from '../../supabase';
+
+/* ============================================================
+   SIGN UP SCREEN
+============================================================ */
 
 export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [nameFocused, setNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  /* ============================================================
+     SIGN UP
+  ============================================================ */
+
   const handleSignUp = async () => {
     if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(
+        'Missing information',
+        'Please complete all required fields.'
+      );
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
+      Alert.alert(
+        'Weak password',
+        'Password must be at least 6 characters long.'
+      );
       return;
     }
 
     setLoading(true);
+
     try {
-      const { data, error } = await Auth.signUp(email.trim(), password, name.trim());
+      const { data, error } = await Auth.signUp(
+        email.trim(),
+        password,
+        name.trim()
+      );
 
       if (error) {
-        Alert.alert('Sign Up Failed', error.message);
+        Alert.alert('Sign up failed', error.message);
         setLoading(false);
         return;
       }
 
       setLoading(false);
 
+      /* --------------------------------------------------------
+         Email confirmation required
+      -------------------------------------------------------- */
+
       if (data?.user && !data?.session) {
-        // Email confirmation is required by Supabase project settings
         Alert.alert(
-          'Registration Successful',
-          'Your account has been created! Please check your email to confirm your account (or disable email confirmation in Supabase if testing).',
+          'Registration successful',
+          'Your account has been created. Please check your email to confirm your account.',
           [
             {
               text: 'Go to Log In',
@@ -59,10 +89,18 @@ export default function SignUpScreen() {
             },
           ]
         );
-      } else if (data?.session) {
+
+        return;
+      }
+
+      /* --------------------------------------------------------
+         Account created and session available
+      -------------------------------------------------------- */
+
+      if (data?.session) {
         Alert.alert(
-          'Success',
-          'Account created successfully!',
+          'Account created',
+          'Your Medtrix account has been created successfully.',
           [
             {
               text: 'Continue',
@@ -70,81 +108,266 @@ export default function SignUpScreen() {
             },
           ]
         );
-      } else {
-        router.replace('/auth/login');
+
+        return;
       }
+
+      /* --------------------------------------------------------
+         Fallback
+      -------------------------------------------------------- */
+
+      router.replace('/auth/login');
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to sign up');
+      Alert.alert(
+        'Something went wrong',
+        err?.message || 'Unable to create your account.'
+      );
+
       setLoading(false);
     }
   };
 
+  /* ============================================================
+     RENDER
+  ============================================================ */
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.canvas} />
-      
-      {/* Subtle Background Elements */}
-      <View style={styles.bgGlowTop} pointerEvents="none" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={COLORS.background.canvas}
+      />
 
-      <KeyboardAvoidingView 
-        style={styles.keyboardView} 
+      {/* ======================================================
+          BACKGROUND ATMOSPHERE
+      ====================================================== */}
+
+      <View pointerEvents="none" style={styles.backgroundLayer}>
+        <View style={styles.blueGlow} />
+        <View style={styles.blueGlowSmall} />
+
+        <View style={styles.gridTop}>
+          <View style={styles.gridLineVertical} />
+          <View style={styles.gridLineVerticalTwo} />
+          <View style={styles.gridLineHorizontal} />
+        </View>
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer} 
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {/* BRANDING */}
-          <View style={styles.brandContainer}>
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="medical-bag" size={28} color="#FFFFFF" />
+          {/* ==================================================
+              BRAND
+          ================================================== */}
+
+          <View style={styles.brandArea}>
+            <View style={styles.brandMark}>
+              <MaterialCommunityIcons
+                name="medical-bag"
+                size={25}
+                color="#FFFFFF"
+              />
             </View>
-            <View style={styles.brandTextRow}>
+
+            <View>
               <Text style={styles.brandName}>MEDTRIX</Text>
+
+              <View style={styles.brandMetaRow}>
+                <View style={styles.statusDot} />
+
+                <Text style={styles.brandMeta}>
+                  CLINICAL INVENTORY
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* MAIN SIGN UP CARD (HERO GLASS) */}
-          <View style={[styles.card, GLASS.hero]}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join Medtrix hospital medicine inventory</Text>
-            </View>
+          {/* ==================================================
+              WELCOME
+          ================================================== */}
 
-            <View style={styles.form}>
-              {/* NAME */}
-              <Text style={styles.label}>Full Name</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={16} color={COLORS.text.muted} style={styles.inputIcon} />
+          <View style={styles.welcomeArea}>
+            <Text style={styles.eyebrow}>
+              GET STARTED
+            </Text>
+
+            <Text style={styles.title}>
+              Create your account.
+            </Text>
+
+            <Text style={styles.subtitle}>
+              Set up your Medtrix account to manage medical
+              inventory, stock levels and dispensing activity.
+            </Text>
+          </View>
+
+          {/* ==================================================
+              SIGN UP CARD
+          ================================================== */}
+
+          <View style={styles.signupCard}>
+            <View style={styles.cardAccent} />
+
+            {/* ==================================================
+                FULL NAME
+            ================================================== */}
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>
+                  FULL NAME
+                </Text>
+
+                <Text style={styles.required}>
+                  REQUIRED
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.inputContainer,
+                  nameFocused && styles.inputContainerFocused,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.inputIconBox,
+                    nameFocused && styles.inputIconBoxFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={17}
+                    color={
+                      nameFocused
+                        ? COLORS.brand.primary
+                        : COLORS.text.muted
+                    }
+                  />
+                </View>
+
                 <TextInput
-                  placeholder="Dr. Jane Doe"
+                  placeholder="Enter your full name"
                   placeholderTextColor={COLORS.text.disabled}
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
+                  onFocus={() => setNameFocused(true)}
+                  onBlur={() => setNameFocused(false)}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="name"
+                  textContentType="name"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  editable={!loading}
                 />
               </View>
+            </View>
 
-              {/* EMAIL */}
-              <Text style={styles.label}>Email or Employee ID</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="id-card-outline" size={16} color={COLORS.text.muted} style={styles.inputIcon} />
+            {/* ==================================================
+                EMAIL
+            ================================================== */}
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>
+                  EMAIL 
+                </Text>
+
+                <Text style={styles.required}>
+                  REQUIRED
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.inputContainer,
+                  emailFocused && styles.inputContainerFocused,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.inputIconBox,
+                    emailFocused && styles.inputIconBoxFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="mail-outline"
+                    size={17}
+                    color={
+                      emailFocused
+                        ? COLORS.brand.primary
+                        : COLORS.text.muted
+                    }
+                  />
+                </View>
+
                 <TextInput
-                  placeholder="name@hospital.org or EMP-ID"
+                  placeholder="name@hospital.org"
                   placeholderTextColor={COLORS.text.disabled}
                   style={styles.input}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
                   value={email}
                   onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  editable={!loading}
                 />
               </View>
+            </View>
 
-              {/* PASSWORD */}
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={16} color={COLORS.text.muted} style={styles.inputIcon} />
+            {/* ==================================================
+                PASSWORD
+            ================================================== */}
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>
+                  PASSWORD
+                </Text>
+
+                <Text style={styles.passwordHint}>
+                  MIN. 6 CHARACTERS
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.inputContainer,
+                  passwordFocused && styles.inputContainerFocused,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.inputIconBox,
+                    passwordFocused && styles.inputIconBoxFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={17}
+                    color={
+                      passwordFocused
+                        ? COLORS.brand.primary
+                        : COLORS.text.muted
+                    }
+                  />
+                </View>
+
                 <TextInput
                   placeholder="Create a password"
                   placeholderTextColor={COLORS.text.disabled}
@@ -152,264 +375,663 @@ export default function SignUpScreen() {
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                  returnKeyType="done"
+                  editable={!loading}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={18} color={COLORS.text.muted} />
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={
+                      showPassword
+                        ? 'eye-outline'
+                        : 'eye-off-outline'
+                    }
+                    size={19}
+                    color={COLORS.text.muted}
+                  />
                 </TouchableOpacity>
               </View>
 
-              {/* SIGN UP BUTTON */}
-              <TouchableOpacity style={styles.button} onPress={handleSignUp} disabled={loading}>
-                <Text style={styles.buttonText}>{loading ? 'Creating Account...' : 'Sign Up for Medtrix'}</Text>
-              </TouchableOpacity>
+              {/* Password guidance */}
+
+              <View style={styles.passwordInfo}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={13}
+                  color={COLORS.text.muted}
+                />
+
+                <Text style={styles.passwordInfoText}>
+                  Use a password you don't use for other accounts.
+                </Text>
+              </View>
             </View>
 
-            {/* OR DIVIDER */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <View style={styles.dividerCapsule}>
-                <Text style={styles.dividerText}>OR</Text>
-              </View>
-              <View style={styles.dividerLine} />
-            </View>
+            {/* ==================================================
+                SIGN UP BUTTON
+            ================================================== */}
 
-            {/* GOOGLE SIGN UP */}
-            <View style={styles.biometricContainer}>
-              <View style={styles.biometricLeft}>
-                <View style={styles.biometricIconWrapper}>
-                  <Ionicons name="logo-google" size={18} color="#2563EB" />
-                </View>
-                <View style={styles.biometricTextWrapper}>
-                  <Text style={styles.biometricTitle}>Continue with Google</Text>
-                  <Text style={styles.biometricSubtitle}>Use your hospital account</Text>
-                </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[
+                styles.signUpButton,
+                loading && styles.signUpButtonDisabled,
+              ]}
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              <View style={styles.signUpButtonInner}>
+                {loading ? (
+                  <>
+                    <View style={styles.loadingDot} />
+
+                    <Text style={styles.signUpButtonText}>
+                      CREATING ACCOUNT...
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.signUpButtonText}>
+                      Create Account
+                    </Text>
+
+                    <View style={styles.arrowCircle}>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={15}
+                        color={COLORS.brand.primary}
+                      />
+                    </View>
+                  </>
+                )}
               </View>
-              <TouchableOpacity style={styles.verifyButton}>
-                <Text style={styles.verifyButtonText}>Sign Up</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
+
+            {/* ==================================================
+                SECURITY NOTE
+            ================================================== */}
+
+            <View style={styles.securityRow}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={15}
+                color={COLORS.status.healthy}
+              />
+
+              <Text style={styles.securityText}>
+                Your account is protected by secure authentication
+              </Text>
             </View>
           </View>
-          
-          {/* LOGIN LINK */}
-          <View style={styles.loginLinkContainer}>
-            <Text style={styles.loginLinkText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.replace('/auth/login')}>
-              <Text style={styles.loginLinkHighlight}>Log In</Text>
+
+          {/* ==================================================
+              GOOGLE
+          ================================================== */}
+
+          <View style={styles.alternativeArea}>
+            <View style={styles.dividerRow}>
+              <View style={styles.divider} />
+
+              <Text style={styles.orText}>
+                OR
+              </Text>
+
+              <View style={styles.divider} />
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.googleButton}
+              onPress={() =>
+                Alert.alert(
+                  'Google Sign Up',
+                  'Google authentication is not connected yet.'
+                )
+              }
+            >
+              <View style={styles.googleIcon}>
+                <Text style={styles.googleG}>
+                  G
+                </Text>
+              </View>
+
+              <View style={styles.googleContent}>
+                <Text style={styles.googleTitle}>
+                  Continue with Google
+                </Text>
+
+                <Text style={styles.googleSubtitle}>
+                  Use your hospital Google account
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={17}
+                color={COLORS.text.muted}
+              />
             </TouchableOpacity>
           </View>
 
+          {/* ==================================================
+              LOGIN
+          ================================================== */}
+
+          <View style={styles.loginArea}>
+            <Text style={styles.loginText}>
+              Already have an account?
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.replace('/auth/login')}
+            >
+              <Text style={styles.loginLink}>
+                login
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+/* ============================================================
+   STYLES
+============================================================ */
+
 const styles = StyleSheet.create({
+  /* ==========================================================
+     SCREEN
+  ========================================================== */
+
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background.canvas,
   },
-  bgGlowTop: {
-    position: 'absolute',
-    top: -50,
-    right: '10%',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: COLORS.brand.soft,
-    opacity: 0.5,
-  },
+
   keyboardView: {
     flex: 1,
   },
+
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 28,
   },
-  // BRANDING
-  brandContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+
+  /* ==========================================================
+     BACKGROUND
+  ========================================================== */
+
+  backgroundLayer: {
+    ...(StyleSheet.absoluteFill as any),
+    overflow: 'hidden',
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    backgroundColor: COLORS.brand.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    ...SHADOWS.soft,
+
+  blueGlow: {
+    position: 'absolute',
+    width: 330,
+    height: 330,
+    borderRadius: 165,
+    top: -175,
+    left: -110,
+    backgroundColor: '#DCEAFF',
+    opacity: 0.75,
   },
-  brandTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  blueGlowSmall: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: -90,
+    right: -80,
+    backgroundColor: '#E8F1FF',
+    opacity: 0.7,
   },
-  brandName: {
-    ...TYPOGRAPHY.heading800,
-    fontSize: 20,
-    color: COLORS.brand.primary,
-    letterSpacing: 1.5,
+
+  gridTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 180,
+    height: 130,
+    opacity: 0.35,
   },
-  // MAIN LOGIN CARD
-  card: {
-    padding: 24,
-    marginBottom: 20,
+
+  gridLineVertical: {
+    position: 'absolute',
+    left: 40,
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#BFD2ED',
   },
-  cardHeader: {
-    marginBottom: 24,
+
+  gridLineVerticalTwo: {
+    position: 'absolute',
+    left: 90,
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#BFD2ED',
   },
-  title: {
-    ...TYPOGRAPHY.heading,
-    fontSize: 24,
-    color: COLORS.text.primary,
-    marginBottom: 6,
-  },
-  subtitle: {
-    ...TYPOGRAPHY.body,
-    fontSize: 14,
-    color: COLORS.text.secondary,
-    lineHeight: 20,
-  },
-  form: {},
-  label: {
-    ...TYPOGRAPHY.bodyMedium,
-    fontSize: 13,
-    color: COLORS.text.secondary,
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    borderColor: '#DCE5EF',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
-  inputContainerFocused: {
-    borderColor: COLORS.brand.primary,
-    backgroundColor: '#FFFFFF',
-    shadowColor: COLORS.brand.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    ...TYPOGRAPHY.body,
-    fontSize: 15,
-    color: COLORS.text.primary,
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  button: {
-    height: 48,
-    backgroundColor: COLORS.brand.primary,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.soft,
-  },
-  buttonText: {
-    ...TYPOGRAPHY.bodyBold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
+
+  gridLineHorizontal: {
+    position: 'absolute',
+    top: 42,
+    left: 0,
+    right: 0,
     height: 1,
-    backgroundColor: COLORS.border.subtle,
+    backgroundColor: '#BFD2ED',
   },
-  dividerCapsule: {
-    paddingHorizontal: 12,
-  },
-  dividerText: {
-    ...TYPOGRAPHY.monoBold,
-    fontSize: 11,
-    color: COLORS.text.muted,
-  },
-  biometricContainer: {
+
+  /* ==========================================================
+     BRAND
+  ========================================================== */
+
+  brandArea: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderWidth: 1,
-    borderColor: COLORS.border.subtle,
-    borderRadius: 16,
-    padding: 16,
+    alignSelf: 'center',
+    marginBottom: 34,
   },
-  biometricLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  biometricIconWrapper: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+
+  brandMark: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    ...SHADOWS.soft,
+  },
+
+  brandName: {
+    ...TYPOGRAPHY.heading800,
+    fontSize: 22,
+    color: COLORS.text.primary,
+    letterSpacing: 2,
+  },
+
+  brandMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.status.healthy,
+    marginRight: 6,
+  },
+
+  brandMeta: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 8,
+    letterSpacing: 1.2,
+    color: COLORS.text.muted,
+  },
+
+  /* ==========================================================
+     WELCOME
+  ========================================================== */
+
+  welcomeArea: {
+    marginBottom: 21,
+  },
+
+  eyebrow: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: COLORS.brand.primary,
+    marginBottom: 8,
+  },
+
+  title: {
+    ...TYPOGRAPHY.heading800,
+    fontSize: 30,
+    lineHeight: 36,
+    color: COLORS.text.primary,
+    letterSpacing: -0.6,
+    marginBottom: 9,
+  },
+
+  subtitle: {
+    ...TYPOGRAPHY.body,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: COLORS.text.secondary,
+    maxWidth: 355,
+  },
+
+  /* ==========================================================
+     SIGN UP CARD
+  ========================================================== */
+
+  signupCard: {
+    position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: COLORS.border.subtle,
+    borderColor: '#E1E8F1',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 19,
+    marginBottom: 20,
+
+    shadowColor: '#17365D',
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 5,
+
+    overflow: 'hidden',
   },
-  biometricTextWrapper: {
+
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 22,
+    right: 22,
+    height: 2,
+    backgroundColor: COLORS.brand.primary,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+
+  /* ==========================================================
+     FORM
+  ========================================================== */
+
+  fieldGroup: {
+    marginBottom: 18,
+  },
+
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 7,
+  },
+
+  label: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 9.5,
+    letterSpacing: 0.9,
+    color: COLORS.text.secondary,
+  },
+
+  required: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 8,
+    letterSpacing: 0.7,
+    color: COLORS.text.muted,
+  },
+
+  passwordHint: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 7.5,
+    letterSpacing: 0.6,
+    color: COLORS.text.muted,
+  },
+
+  inputContainer: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFD',
+    borderWidth: 1,
+    borderColor: '#E0E7F0',
+    borderRadius: 13,
+    paddingHorizontal: 10,
+  },
+
+  inputContainerFocused: {
+    borderColor: COLORS.brand.primary,
+  },
+
+  inputIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF3F8',
+    marginRight: 9,
+  },
+
+  inputIconBoxFocused: {
+    backgroundColor: '#EAF2FF',
+  },
+
+  input: {
     flex: 1,
-  },
-  biometricTitle: {
-    ...TYPOGRAPHY.bodyBold,
+    ...TYPOGRAPHY.body,
     fontSize: 14,
     color: COLORS.text.primary,
-    marginBottom: 2,
+    paddingVertical: 0,
   },
-  biometricSubtitle: {
-    ...TYPOGRAPHY.body,
-    fontSize: 12,
-    color: COLORS.text.secondary,
-  },
-  verifyButton: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.subtle,
-  },
-  verifyButtonText: {
-    ...TYPOGRAPHY.bodyBold,
-    fontSize: 12,
-    color: COLORS.brand.primary,
-  },
-  loginLinkContainer: {
-    flexDirection: 'row',
+
+  eyeButton: {
+    width: 38,
+    height: 42,
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
-  loginLinkText: {
+
+  /* ==========================================================
+     PASSWORD INFO
+  ========================================================== */
+
+  passwordInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 7,
+    paddingHorizontal: 2,
+  },
+
+  passwordInfoText: {
     ...TYPOGRAPHY.body,
-    fontSize: 14,
-    color: COLORS.text.secondary,
+    fontSize: 9.5,
+    color: COLORS.text.muted,
+    marginLeft: 5,
   },
-  loginLinkHighlight: {
+
+  /* ==========================================================
+     BUTTON
+  ========================================================== */
+
+  signUpButton: {
+    height: 52,
+    borderRadius: 13,
+    backgroundColor: COLORS.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    shadowColor: COLORS.brand.primary,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  signUpButtonDisabled: {
+    opacity: 0.72,
+  },
+
+  signUpButtonInner: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  signUpButtonText: {
     ...TYPOGRAPHY.bodyBold,
     fontSize: 14,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+
+  arrowCircle: {
+    position: 'absolute',
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    marginRight: 9,
+    opacity: 0.9,
+  },
+
+  /* ==========================================================
+     SECURITY
+  ========================================================== */
+
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+
+  securityText: {
+    ...TYPOGRAPHY.body,
+    fontSize: 10,
+    color: COLORS.text.muted,
+    marginLeft: 6,
+  },
+
+  /* ==========================================================
+     ALTERNATIVE SIGN UP
+  ========================================================== */
+
+  alternativeArea: {
+    marginBottom: 20,
+  },
+
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#DDE4ED',
+  },
+
+  orText: {
+    ...TYPOGRAPHY.monoBold,
+    fontSize: 9,
+    color: COLORS.text.muted,
+    marginHorizontal: 12,
+    letterSpacing: 1,
+  },
+
+  googleButton: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderWidth: 1,
+    borderColor: '#DCE4ED',
+    borderRadius: 15,
+    paddingHorizontal: 13,
+  },
+
+  googleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E1E7EF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  googleG: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+
+  googleContent: {
+    flex: 1,
+    marginLeft: 11,
+  },
+
+  googleTitle: {
+    ...TYPOGRAPHY.bodyBold,
+    fontSize: 12.5,
+    color: COLORS.text.primary,
+    marginBottom: 3,
+  },
+
+  googleSubtitle: {
+    ...TYPOGRAPHY.body,
+    fontSize: 10.5,
+    color: COLORS.text.muted,
+  },
+
+  /* ==========================================================
+     LOGIN LINK
+  ========================================================== */
+
+  loginArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+
+  loginText: {
+    ...TYPOGRAPHY.body,
+    fontSize: 12,
+    color: COLORS.text.secondary,
+  },
+
+  loginLink: {
+    ...TYPOGRAPHY.bodyBold,
+    fontSize: 12,
     color: COLORS.brand.primary,
+    marginLeft: 5,
   },
 });
