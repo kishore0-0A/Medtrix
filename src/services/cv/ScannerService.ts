@@ -1,79 +1,116 @@
 import { FrontendResultModel, DetectedItem } from './models';
 import { QuantityCalculator } from './QuantityCalculator';
+import * as FileSystem from 'expo-file-system/legacy';
+
+interface ProcessFrameOptions {
+  imageUri?: string;
+}
+
+const buildDetectedItems = (packagesDetected: number): DetectedItem[] => {
+  const count = Math.max(packagesDetected, 1);
+
+  return Array.from({ length: count }, (_, index) => ({
+    id: `medicine-cover-${index + 1}`,
+    type: 'box',
+    boundingBox: {
+      x: 42,
+      y: 95 + index * 118,
+      width: 230,
+      height: 96,
+    },
+    confidence: 0.9,
+    label: `COVER ${index + 1}`,
+  }));
+};
 
 export class ScannerService {
-  // Simulates processing a camera frame
-  static async processFrame(): Promise<FrontendResultModel> {
-    return new Promise((resolve) => {
-      // Simulate processing time
-      setTimeout(() => {
-        // Mock CV items detected (e.g., 4 boxes)
-        const mockItems: DetectedItem[] = [
-          {
-            id: 'box-1',
-            type: 'box',
-            boundingBox: { x: 50, y: 100, width: 200, height: 100 },
-            confidence: 0.95,
-            label: 'BOX 1',
-          },
-          {
-            id: 'box-2',
-            type: 'box',
-            boundingBox: { x: 50, y: 220, width: 200, height: 100 },
-            confidence: 0.93,
-            label: 'BOX 2',
-          },
-          {
-            id: 'box-3',
-            type: 'box',
-            boundingBox: { x: 50, y: 340, width: 200, height: 100 },
-            confidence: 0.91,
-            label: 'BOX 3',
-          },
-          {
-            id: 'box-4',
-            type: 'box',
-            boundingBox: { x: 50, y: 460, width: 200, height: 100 },
-            confidence: 0.89,
-            label: 'BOX 4',
-          },
-        ];
+  static async processFrame(options: ProcessFrameOptions = {}): Promise<FrontendResultModel> {
+    if (!options.imageUri) {
+      throw new Error("No image provided for scanning.");
+    }
 
-        // Mock OCR result
-        const medicineInfo = {
-          name: 'Paracetamol',
-          strength: '500mg',
-          form: 'Tablet',
-        };
+    const apiUrl = process.env.EXPO_PUBLIC_OCR_API_URL || 'http://192.168.1.10:8000';
+    
+    try {
+      const uploadPromise = FileSystem.uploadAsync(`${apiUrl}/api/v1/scan`, options.imageUri, {
+        fieldName: 'file',
+        httpMethod: 'POST',
+        uploadType: 1 as any, // FileSystem.FileSystemUploadType.MULTIPART
+        mimeType: 'image/jpeg',
+      });
 
-        const batchInfo = {
-          batchNumber: 'BT-24081',
-          manufacturingDate: '01/2024',
-          expiryDate: '12/2027',
-          mrp: 42.5,
-        };
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('timeout')), 60000); // 60-second timeout
+      });
 
-        const packInfo = {
-          unitsPerStrip: 10,
-          stripsPerPackage: 10,
-        };
+      const response = await Promise.race([uploadPromise, timeoutPromise]);
 
-        // Run calculation
-        const quantityInfo = QuantityCalculator.calculate(mockItems, packInfo);
+      if (response.status !== 200) {
+        throw new Error(`Server returned ${response.status}`);
+      }
 
-        const result: FrontendResultModel = {
-          medicine: medicineInfo,
-          batch: batchInfo,
-          quantity: quantityInfo,
-          confidence: {
-            medicine: 0.94,
-            quantity: 0.92,
-          },
-          items: mockItems,
-        };
+      const json = JSON.parse(response.body);
+      
+      if (!json.success) {
+        throw new Error(json.error || "OCR processing failed");
+      }
+      
+      const data = json.data;
 
-        resolve(result);
-      }, 1500); // 1.5s simulated processing time
-    });
+      // Dummy quantity items logic for visual representation
+      const items = buildDetectedItems(1);
+      const quantityInfo = QuantityCalculator.calculate(items, { stripsPerPackage: null, unitsPerStrip: data.pack_size || null });
+
+      return {
+        medicine: {
+          name: data.medicine_name || '',
+          genericName: data.generic_name || null,
+          activeIngredient: data.active_ingredient || null,
+          composition: data.composition || null,
+          strength: data.strength || null,
+          form: data.dosage_form || null,
+          manufacturer: data.manufacturer_name || null,
+          manufacturerAddress: data.manufacturer_address || null,
+          manufacturingLicenseNumber: data.manufacturing_license_number || null,
+        },
+        batch: {
+          batchNumber: data.batch_number || null,
+          lotNumber: data.lot_number || null,
+          manufacturingDate: data.manufacturing_date || null,
+          expiryDate: data.expiry_date || null,
+          mrp: data.mrp || null,
+          currency: data.currency || null,
+        },
+        pack: {
+          packSize: data.pack_size || null,
+          packUnit: data.pack_unit || null,
+        },
+        identification: {
+          barcode: data.barcode || null,
+          gtin: data.gtin || null,
+          qrCode: data.qr_code || null,
+        },
+        safety: {
+          storageInstructions: data.storage_instructions || null,
+          prescriptionInfo: data.prescription_info || null,
+          warnings: data.warnings || null,
+        },
+        contact: {
+          customerCare: data.customer_care || null,
+          website: data.website || null,
+        },
+        quantity: quantityInfo,
+        confidence: {
+          medicine: 0.9,
+          quantity: quantityInfo.isUnknown ? 0.62 : 0.88,
+        },
+        items,
+        capturedImageUri: options.imageUri,
+        rawOcrText: data.raw_text || '',
+      };
+    } catch (error) {
+      console.error("OCR Service Error:", error);
+      throw error;
+    }
   }
 }

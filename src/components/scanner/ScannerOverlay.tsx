@@ -44,22 +44,7 @@ export function ScannerOverlay({ items, isScanning }: ScannerOverlayProps) {
 
   return (
     <View style={styles.overlayContainer} pointerEvents="none">
-      {/* Target Frame (Bracket Design) */}
-      <View style={styles.targetFrame}>
-        <View style={styles.scannerBracketTopLeft} />
-        <View style={styles.scannerBracketTopRight} />
-        <View style={styles.scannerBracketBottomLeft} />
-        <View style={styles.scannerBracketBottomRight} />
 
-        {isScanning && (
-          <Animated.View
-            style={[
-              styles.scanLine,
-              { transform: [{ translateY }] },
-            ]}
-          />
-        )}
-      </View>
 
       {/* Render Bounding Boxes */}
       {items.map((item) => {

@@ -432,7 +432,7 @@ export default function LoginScreen() {
 
           <View style={styles.signupArea}>
             <Text style={styles.signupText}>
-              Don't have an account?
+              Don&apos;t have an account?
             </Text>
 
             <TouchableOpacity

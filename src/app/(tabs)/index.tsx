@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+
 import {
   Animated,
   Dimensions,
   Easing,
-  Platform,
   Pressable,
   ScrollView,
   StatusBar,
@@ -11,14 +11,20 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+
 import {
   Ionicons,
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+/* ============================================================
+   COLORS
+============================================================ */
 
 const COLORS = {
   background: '#F6F9FC',
@@ -60,167 +66,100 @@ const COLORS = {
   navyLight: '#18385F',
 };
 
-const inventoryStats = [
+/* ============================================================
+   TEMPORARY HOME DATA
+   Later these can come from Supabase.
+============================================================ */
+
+const inventorySummary = {
+  totalMedicines: '1,248',
+  lowStock: '24',
+  expiringSoon: '18',
+  outOfStock: '07',
+};
+
+const attentionItems = [
   {
-    value: '1,248',
-    label: 'TOTAL MEDICINES',
-    footer: '+12 this week',
-    icon: 'medical',
-    color: COLORS.primary,
-    bgColor: COLORS.primarySoft,
-  },
-  {
+    name: 'Low stock medicines',
     value: '24',
-    label: 'LOW STOCK',
-    footer: 'Needs attention',
-    icon: 'warning',
+    description: 'Medicines need restocking',
+    icon: 'warning-outline' as const,
     color: COLORS.warning,
-    bgColor: COLORS.warningSoft,
+    background: COLORS.warningSoft,
   },
   {
+    name: 'Expiring soon',
     value: '18',
-    label: 'EXPIRING SOON',
-    footer: 'Within 30 days',
-    icon: 'time',
+    description: 'Batches within 30 days',
+    icon: 'time-outline' as const,
     color: COLORS.orange,
-    bgColor: COLORS.orangeSoft,
-  },
-  {
-    value: '07',
-    label: 'OUT OF STOCK',
-    footer: 'Action required',
-    icon: 'close-circle',
-    color: COLORS.critical,
-    bgColor: COLORS.criticalSoft,
+    background: COLORS.orangeSoft,
   },
 ];
 
-const expiringMedicines = [
-  {
-    name: 'Paracetamol 500mg',
-    batch: 'BT-24081',
-    days: 12,
-    date: '12/2027',
-    severity: 'medium',
-  },
-  {
-    name: 'Amoxicillin 500mg',
-    batch: 'AM-13622',
-    days: 16,
-    date: '16/2027',
-    severity: 'medium',
-  },
-  {
-    name: 'Cetirizine 10mg',
-    batch: 'CT-33104',
-    days: 24,
-    date: '24/2028',
-    severity: 'low',
-  },
-];
-
-const recentActivities = [
-  {
-    title: 'Medicine received',
-    medicine: 'Paracetamol 500mg',
-    detail: '+24 units added to inventory',
-    time: '2h ago',
-    icon: 'arrow-down',
-    color: COLORS.success,
-    bgColor: COLORS.successSoft,
-  },
-  {
-    title: 'Medicine issued',
-    medicine: 'Amoxicillin 500mg',
-    detail: '12 units issued to Surgery Ward',
-    time: '5h ago',
-    icon: 'arrow-up',
-    color: COLORS.critical,
-    bgColor: COLORS.criticalSoft,
-  },
-  {
-    title: 'Stock adjusted',
-    medicine: 'Cetirizine 10mg',
-    detail: 'Quantity corrected after physical count',
-    time: '7h ago',
-    icon: 'sync',
-    color: COLORS.primary,
-    bgColor: COLORS.primarySoft,
-  },
-  {
-    title: 'Batch verified',
-    medicine: 'Aspirin 325mg',
-    detail: 'New batch registered successfully',
-    time: '9h ago',
-    icon: 'checkmark-done',
-    color: COLORS.purple,
-    bgColor: COLORS.purpleSoft,
-  },
-];
+/* ============================================================
+   TYPES
+============================================================ */
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
-type MaterialIconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+/* ============================================================
+   HOME SCREEN
+============================================================ */
 
 export default function HomeScreen() {
+  /* ----------------------------------------------------------
+     Entrance animations
+  ---------------------------------------------------------- */
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const greetingAnim = useRef(new Animated.Value(0)).current;
   const scanAnim = useRef(new Animated.Value(0)).current;
-  const tacticalAnim = useRef(new Animated.Value(0)).current;
-  const kpiAnim = useRef(new Animated.Value(0)).current;
-  const healthAnim = useRef(new Animated.Value(0)).current;
-  const expiringAnim = useRef(new Animated.Value(0)).current;
-  const activityAnim = useRef(new Animated.Value(0)).current;
+  const inventoryAnim = useRef(new Animated.Value(0)).current;
+  const attentionAnim = useRef(new Animated.Value(0)).current;
+
+  /* ----------------------------------------------------------
+     Smart Scan animations
+  ---------------------------------------------------------- */
 
   const scanPulse = useRef(new Animated.Value(0)).current;
   const scanLine = useRef(new Animated.Value(0)).current;
 
+  /* ==========================================================
+     ANIMATIONS
+  ========================================================== */
+
   useEffect(() => {
-    Animated.stagger(85, [
+    Animated.stagger(90, [
       Animated.timing(headerAnim, {
         toValue: 1,
         duration: 420,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+
       Animated.timing(greetingAnim, {
         toValue: 1,
         duration: 420,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+
       Animated.timing(scanAnim, {
         toValue: 1,
-        duration: 480,
+        duration: 500,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(tacticalAnim, {
+
+      Animated.timing(inventoryAnim, {
         toValue: 1,
         duration: 420,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(kpiAnim, {
-        toValue: 1,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(healthAnim, {
-        toValue: 1,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(expiringAnim, {
-        toValue: 1,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(activityAnim, {
+
+      Animated.timing(attentionAnim, {
         toValue: 1,
         duration: 420,
         easing: Easing.out(Easing.cubic),
@@ -228,24 +167,33 @@ export default function HomeScreen() {
       }),
     ]).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanPulse, {
-          toValue: 1,
-          duration: 1800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanPulse, {
-          toValue: 0,
-          duration: 1800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
+    /* --------------------------------------------------------
+       Scanner pulse
+    -------------------------------------------------------- */
 
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanPulse, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(scanPulse, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    /* --------------------------------------------------------
+       Scanner line
+    -------------------------------------------------------- */
+
+    const lineAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLine, {
           toValue: 1,
@@ -253,6 +201,7 @@ export default function HomeScreen() {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
+
         Animated.timing(scanLine, {
           toValue: 0,
           duration: 1700,
@@ -260,19 +209,28 @@ export default function HomeScreen() {
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
+
+    pulseAnimation.start();
+    lineAnimation.start();
+
+    return () => {
+      pulseAnimation.stop();
+      lineAnimation.stop();
+    };
   }, [
     headerAnim,
     greetingAnim,
     scanAnim,
-    tacticalAnim,
-    kpiAnim,
-    healthAnim,
-    expiringAnim,
-    activityAnim,
+    inventoryAnim,
+    attentionAnim,
     scanPulse,
     scanLine,
   ]);
+
+  /* ==========================================================
+     HELPERS
+  ========================================================== */
 
   const handleNavigation = (route: string) => {
     router.push(route as never);
@@ -305,41 +263,24 @@ export default function HomeScreen() {
     ],
   });
 
-  const today = useMemo(() => {
-    const date = new Date();
-
-    const weekday = date
-      .toLocaleDateString('en-US', {
-        weekday: 'short',
-      })
-      .toUpperCase();
-
-    const month = date
-      .toLocaleDateString('en-US', {
-        month: 'short',
-      })
-      .toUpperCase();
-
-    const day = date.getDate();
-
-    return `${weekday}, ${month} ${day}`;
-  }, []);
-
-  const currentTime = useMemo(() => {
-    return new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }, []);
+  /* ==========================================================
+     RENDER
+  ========================================================== */
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top']}
+    >
       <StatusBar
         barStyle="dark-content"
         backgroundColor={COLORS.background}
       />
 
-      {/* Background atmosphere */}
+      {/* =====================================================
+          BACKGROUND ATMOSPHERE
+      ===================================================== */}
+
       <View
         pointerEvents="none"
         style={styles.backgroundGlowBlue}
@@ -354,9 +295,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* =====================================================
+        {/* ===================================================
             HEADER
-        ===================================================== */}
+        =================================================== */}
 
         <Animated.View
           style={[
@@ -364,6 +305,8 @@ export default function HomeScreen() {
             getTransform(headerAnim, 10),
           ]}
         >
+          {/* Brand */}
+
           <Pressable
             style={styles.brandContainer}
             onPress={() => handleNavigation('/profile')}
@@ -389,18 +332,9 @@ export default function HomeScreen() {
             </View>
           </Pressable>
 
-          <View style={styles.headerActions}>
-            <Pressable
-              style={styles.headerButton}
-              onPress={() => {}}
-            >
-              <Ionicons
-                name="search-outline"
-                size={19}
-                color={COLORS.text}
-              />
-            </Pressable>
+          {/* Header Actions */}
 
+          <View style={styles.headerActions}>
             <Pressable
               style={styles.headerButton}
               onPress={() =>
@@ -415,25 +349,12 @@ export default function HomeScreen() {
 
               <View style={styles.notificationDot} />
             </Pressable>
-
-            <Pressable
-              style={styles.headerButton}
-              onPress={() =>
-                handleNavigation('/profile')
-              }
-            >
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={COLORS.text}
-              />
-            </Pressable>
           </View>
         </Animated.View>
 
-        {/* =====================================================
+        {/* ===================================================
             GREETING
-        ===================================================== */}
+        =================================================== */}
 
         <Animated.View
           style={[
@@ -442,22 +363,23 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.greetingContent}>
-            <View style={styles.greetingMeta}>
-            </View>
+            <Text style={styles.greetingEyebrow}>
+              WELCOME BACK
+            </Text>
 
             <Text style={styles.greetingName}>
               Kishore
             </Text>
 
             <Text style={styles.greetingDescription}>
-              Here&apos;s your medicine inventory overview.
+              Manage your medicine inventory.
             </Text>
           </View>
         </Animated.View>
 
-        {/* =====================================================
+        {/* ===================================================
             SMART SCAN HERO
-        ===================================================== */}
+        =================================================== */}
 
         <Animated.View
           style={[
@@ -465,9 +387,15 @@ export default function HomeScreen() {
             getScale(scanAnim),
           ]}
         >
+          {/* Glow */}
+
           <View style={styles.scanHeroGlow} />
 
           <View style={styles.scanHeroContent}>
+            {/* ------------------------------------------------
+                Hero top
+            ------------------------------------------------ */}
+
             <View style={styles.scanHeroTop}>
               <View style={styles.scanHeroText}>
                 <View style={styles.scanLabelRow}>
@@ -495,7 +423,10 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              {/* Animated scanner visual */}
+              {/* ------------------------------------------------
+                  Scanner visual
+              ------------------------------------------------ */}
+
               <Animated.View
                 style={[
                   styles.scanVisual,
@@ -512,6 +443,8 @@ export default function HomeScreen() {
                 ]}
               >
                 <View style={styles.scanVisualOuter}>
+                  {/* Corners */}
+
                   <View style={styles.scanCornerTL} />
                   <View style={styles.scanCornerTR} />
                   <View style={styles.scanCornerBL} />
@@ -522,6 +455,8 @@ export default function HomeScreen() {
                     size={34}
                     color="#93C5FD"
                   />
+
+                  {/* Moving scan line */}
 
                   <Animated.View
                     style={[
@@ -542,6 +477,35 @@ export default function HomeScreen() {
                 </View>
               </Animated.View>
             </View>
+
+            {/* ------------------------------------------------
+                Smart scan features
+            ------------------------------------------------ */}
+
+            <View style={styles.scanFeatureRow}>
+              <ScanFeature
+                icon="text-outline"
+                label="OCR"
+              />
+
+              <View style={styles.featureDivider} />
+
+              <ScanFeature
+                icon="cube-outline"
+                label="BATCH"
+              />
+
+              <View style={styles.featureDivider} />
+
+              <ScanFeature
+                icon="calendar-outline"
+                label="EXPIRY"
+              />
+            </View>
+
+            {/* ------------------------------------------------
+                Start scanning button
+            ------------------------------------------------ */}
 
             <Pressable
               style={({ pressed }) => [
@@ -575,394 +539,183 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* =====================================================
-            TACTICAL ACTIONS
-        ===================================================== */}
+        {/* ===================================================
+            INVENTORY SUMMARY
+        =================================================== */}
 
         <Animated.View
           style={[
             styles.section,
-            getTransform(tacticalAnim),
+            getTransform(inventoryAnim),
           ]}
         >
           <SectionHeader
-            title="Quick actions"
-            subtitle="Common operations"
-          />
-
-          <View style={styles.actionGrid}>
-            <ActionCard
-              label="Scan"
-              description="Identify medicine"
-              icon="scan-outline"
-              color={COLORS.primary}
-              background={COLORS.primarySoft}
-              onPress={() =>
-                handleNavigation('/scan')
-              }
-            />
-
-            <ActionCard
-              label="Receive"
-              description="Add stock"
-              icon="arrow-down-outline"
-              color={COLORS.success}
-              background={COLORS.successSoft}
-              onPress={() =>
-                handleNavigation('/inventory')
-              }
-            />
-
-            <ActionCard
-              label="Issue"
-              description="Record usage"
-              icon="arrow-up-outline"
-              color={COLORS.critical}
-              background={COLORS.criticalSoft}
-              onPress={() =>
-                handleNavigation('/inventory')
-              }
-            />
-
-            <ActionCard
-              label="Reports"
-              description="View analytics"
-              icon="bar-chart-outline"
-              color={COLORS.purple}
-              background={COLORS.purpleSoft}
-              onPress={() =>
-                handleNavigation('/inventory')
-              }
-            />
-          </View>
-        </Animated.View>
-
-        {/* =====================================================
-            INVENTORY OVERVIEW
-        ===================================================== */}
-
-        <Animated.View
-          style={[
-            styles.section,
-            getTransform(kpiAnim),
-          ]}
-        >
-          <SectionHeader
-            title="Inventory overview"
-            action="View inventory"
+            title="Inventory"
+            action="View all"
             onAction={() =>
               handleNavigation('/inventory')
             }
           />
 
-          <View style={styles.kpiGrid}>
-            {inventoryStats.map((stat) => (
-              <KpiCard
-                key={stat.label}
-                value={stat.value}
-                label={stat.label}
-                footer={stat.footer}
-                icon={stat.icon as IoniconName}
-                color={stat.color}
-                bgColor={stat.bgColor}
-              />
-            ))}
-          </View>
-        </Animated.View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.inventoryCard,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={() =>
+              handleNavigation('/inventory')
+            }
+          >
+            {/* Total medicines */}
 
-        {/* =====================================================
-            STOCK HEALTH
-        ===================================================== */}
+            <View style={styles.inventoryMain}>
+              <View style={styles.inventoryIcon}>
+                <Ionicons
+                  name="medkit-outline"
+                  size={21}
+                  color={COLORS.primary}
+                />
+              </View>
 
-        <Animated.View
-          style={[
-            styles.section,
-            getTransform(healthAnim),
-          ]}
-        >
-          <SectionHeader
-            title="Stock health"
-            subtitle="Current inventory condition"
-          />
-
-          <View style={styles.healthCard}>
-            <View style={styles.healthHeader}>
-              <View>
-                <Text style={styles.healthHeadline}>
-                  Overall stock condition
+              <View style={styles.inventoryMainText}>
+                <Text style={styles.inventoryLabel}>
+                  TOTAL MEDICINES
                 </Text>
 
-                <Text style={styles.healthSubline}>
-                  Based on current inventory levels
+                <Text style={styles.inventoryValue}>
+                  {inventorySummary.totalMedicines}
+                </Text>
+
+                <Text style={styles.inventorySubtitle}>
+                  Medicines currently in inventory
                 </Text>
               </View>
 
-              <View style={styles.healthScore}>
-                <Text style={styles.healthScoreValue}>
-                  72%
-                </Text>
-
-                <Text style={styles.healthScoreLabel}>
-                  HEALTHY
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.healthBar}>
-              <View
-                style={[
-                  styles.healthSegmentHealthy,
-                  { flex: 72 },
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.healthSegmentLow,
-                  { flex: 18 },
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.healthSegmentCritical,
-                  { flex: 10 },
-                ]}
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.textLight}
               />
             </View>
 
-            <View style={styles.healthLegend}>
-              <HealthLegend
-                label="Healthy"
-                value="72%"
-                color={COLORS.success}
-              />
+            {/* Divider */}
 
-              <HealthLegend
+            <View style={styles.inventoryDivider} />
+
+            {/* Compact metrics */}
+
+            <View style={styles.inventoryMetrics}>
+              <MiniMetric
+                value={inventorySummary.lowStock}
                 label="Low stock"
-                value="18%"
                 color={COLORS.warning}
+                background={COLORS.warningSoft}
               />
 
-              <HealthLegend
-                label="Critical"
-                value="10%"
+              <View style={styles.metricDivider} />
+
+              <MiniMetric
+                value={inventorySummary.expiringSoon}
+                label="Expiring soon"
+                color={COLORS.orange}
+                background={COLORS.orangeSoft}
+              />
+
+              <View style={styles.metricDivider} />
+
+              <MiniMetric
+                value={inventorySummary.outOfStock}
+                label="Out of stock"
                 color={COLORS.critical}
+                background={COLORS.criticalSoft}
               />
             </View>
-          </View>
+          </Pressable>
         </Animated.View>
 
-        {/* =====================================================
-            EXPIRING SOON
-        ===================================================== */}
+        {/* ===================================================
+            NEEDS ATTENTION
+        =================================================== */}
 
         <Animated.View
           style={[
             styles.section,
-            getTransform(expiringAnim),
+            getTransform(attentionAnim),
           ]}
         >
           <SectionHeader
-            title="Expiring soon"
-            subtitle="Priority batches"
+            title="Needs attention"
+            subtitle="Items requiring action"
             action="View alerts"
             onAction={() =>
               handleNavigation('/alerts')
             }
           />
 
-          <View style={styles.expiryCard}>
-            {expiringMedicines.map((medicine, index) => (
+          <View style={styles.attentionCard}>
+            {attentionItems.map((item, index) => (
               <Pressable
-                key={medicine.batch}
-                style={[
-                  styles.expiryRow,
+                key={item.name}
+                style={({ pressed }) => [
+                  styles.attentionRow,
                   index ===
-                    expiringMedicines.length - 1 &&
+                    attentionItems.length - 1 &&
                     styles.lastRow,
+                  pressed && styles.rowPressed,
                 ]}
                 onPress={() =>
                   handleNavigation('/alerts')
                 }
               >
-                <View style={styles.medicineIcon}>
-                  <MaterialCommunityIcons
-                    name="pill"
+                <View
+                  style={[
+                    styles.attentionIcon,
+                    {
+                      backgroundColor: item.background,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon}
                     size={18}
-                    color={COLORS.textSecondary}
+                    color={item.color}
                   />
                 </View>
 
-                <View style={styles.expiryMedicineInfo}>
-                  <Text
-                    style={styles.expiryMedicineName}
-                    numberOfLines={1}
-                  >
-                    {medicine.name}
+                <View style={styles.attentionContent}>
+                  <Text style={styles.attentionTitle}>
+                    {item.name}
                   </Text>
 
-                  <View style={styles.batchRow}>
-                    <Text style={styles.batchLabel}>
-                      BATCH
-                    </Text>
-
-                    <Text style={styles.batchValue}>
-                      {medicine.batch}
-                    </Text>
-                  </View>
+                  <Text style={styles.attentionDescription}>
+                    {item.description}
+                  </Text>
                 </View>
 
-                <View style={styles.expiryRight}>
-                  <View
+                <View style={styles.attentionRight}>
+                  <Text
                     style={[
-                      styles.daysBadge,
-                      medicine.days <= 14 &&
-                        styles.daysBadgeUrgent,
+                      styles.attentionValue,
+                      {
+                        color: item.color,
+                      },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.daysBadgeText,
-                        medicine.days <= 14 &&
-                          styles.daysBadgeTextUrgent,
-                      ]}
-                    >
-                      {medicine.days}d
-                    </Text>
-                  </View>
-
-                  <Text style={styles.expiryDate}>
-                    EXP {medicine.date}
+                    {item.value}
                   </Text>
-                </View>
 
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={COLORS.textLight}
-                  style={styles.rowChevron}
-                />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={COLORS.textLight}
+                  />
+                </View>
               </Pressable>
             ))}
           </View>
         </Animated.View>
 
-        {/* =====================================================
-            RECENT ACTIVITY
-        ===================================================== */}
-
-        <Animated.View
-          style={[
-            styles.section,
-            getTransform(activityAnim),
-          ]}
-        >
-          <SectionHeader
-            title="Recent activity"
-            subtitle="Latest inventory events"
-            action="View all"
-            onAction={() =>
-              handleNavigation('/activity')
-            }
-          />
-
-          <View style={styles.activityCard}>
-            {recentActivities.map((activity, index) => (
-              <View
-                key={`${activity.medicine}-${activity.time}`}
-                style={[
-                  styles.activityRow,
-                  index ===
-                    recentActivities.length - 1 &&
-                    styles.lastRow,
-                ]}
-              >
-                <View style={styles.activityTimeline}>
-                  <View
-                    style={[
-                      styles.activityIcon,
-                      {
-                        backgroundColor:
-                          activity.bgColor,
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={activity.icon as IoniconName}
-                      size={15}
-                      color={activity.color}
-                    />
-                  </View>
-
-                  {index !==
-                    recentActivities.length - 1 && (
-                    <View
-                      style={styles.timelineLine}
-                    />
-                  )}
-                </View>
-
-                <View style={styles.activityContent}>
-                  <View style={styles.activityTitleRow}>
-                    <Text style={styles.activityTitle}>
-                      {activity.title}
-                    </Text>
-
-                    <Text style={styles.activityTime}>
-                      {activity.time}
-                    </Text>
-                  </View>
-
-                  <Text style={styles.activityMedicine}>
-                    {activity.medicine}
-                  </Text>
-
-                  <Text style={styles.activityDetail}>
-                    {activity.detail}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* =====================================================
-            SYSTEM STATUS
-        ===================================================== */}
-
-        <Animated.View
-          style={[
-            styles.systemStatus,
-            getTransform(activityAnim, 10),
-          ]}
-        >
-          <View style={styles.systemStatusIcon}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={16}
-              color={COLORS.success}
-            />
-          </View>
-
-          <View style={styles.systemStatusText}>
-            <Text style={styles.systemStatusTitle}>
-              Inventory sync active
-            </Text>
-
-            <Text style={styles.systemStatusSubtitle}>
-              Latest changes synchronized successfully
-            </Text>
-          </View>
-
-          <View style={styles.syncIndicator}>
-            <View style={styles.syncDot} />
-
-            <Text style={styles.syncText}>
-              LIVE
-            </Text>
-          </View>
-        </Animated.View>
+        {/* Bottom spacing for tab bar */}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -971,7 +724,7 @@ export default function HomeScreen() {
 }
 
 /* ============================================================
-   COMPONENTS
+   SECTION HEADER
 ============================================================ */
 
 function SectionHeader({
@@ -1019,6 +772,10 @@ function SectionHeader({
   );
 }
 
+/* ============================================================
+   SMART SCAN FEATURE
+============================================================ */
+
 function ScanFeature({
   icon,
   label,
@@ -1041,107 +798,44 @@ function ScanFeature({
   );
 }
 
-function ActionCard({
+/* ============================================================
+   MINI INVENTORY METRIC
+============================================================ */
+
+function MiniMetric({
+  value,
   label,
-  description,
-  icon,
   color,
   background,
-  onPress,
 }: {
+  value: string;
   label: string;
-  description: string;
-  icon: IoniconName;
   color: string;
   background: string;
-  onPress: () => void;
 }) {
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.actionCard,
-        pressed && styles.buttonPressed,
-      ]}
-      onPress={onPress}
-    >
+    <View style={styles.miniMetric}>
       <View
         style={[
-          styles.actionIcon,
+          styles.miniMetricIcon,
           {
             backgroundColor: background,
           },
         ]}
       >
-        <Ionicons
-          name={icon}
-          size={19}
-          color={color}
-        />
-      </View>
-
-      <Text style={styles.actionLabel}>
-        {label}
-      </Text>
-
-      <Text style={styles.actionDescription}>
-        {description}
-      </Text>
-    </Pressable>
-  );
-}
-
-function KpiCard({
-  value,
-  label,
-  footer,
-  icon,
-  color,
-  bgColor,
-}: {
-  value: string;
-  label: string;
-  footer: string;
-  icon: IoniconName;
-  color: string;
-  bgColor: string;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.kpiCard,
-        pressed && styles.buttonPressed,
-      ]}
-    >
-      <View style={styles.kpiTop}>
         <View
           style={[
-            styles.kpiIcon,
+            styles.miniMetricDot,
             {
-              backgroundColor: bgColor,
+              backgroundColor: color,
             },
           ]}
-        >
-          <Ionicons
-            name={icon}
-            size={16}
-            color={color}
-          />
-        </View>
-
-        <Ionicons
-          name="ellipsis-horizontal"
-          size={15}
-          color={COLORS.textLight}
         />
       </View>
-
-      <Text style={styles.kpiLabel}>
-        {label}
-      </Text>
 
       <Text
         style={[
-          styles.kpiValue,
+          styles.miniMetricValue,
           {
             color,
           },
@@ -1150,57 +844,8 @@ function KpiCard({
         {value}
       </Text>
 
-      <View style={styles.kpiFooterRow}>
-        <View
-          style={[
-            styles.kpiFooterDot,
-            {
-              backgroundColor: color,
-            },
-          ]}
-        />
-
-        <Text
-          style={[
-            styles.kpiFooter,
-            {
-              color,
-            },
-          ]}
-        >
-          {footer}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function HealthLegend({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <View style={styles.healthLegendItem}>
-      <View
-        style={[
-          styles.healthLegendDot,
-          {
-            backgroundColor: color,
-          },
-        ]}
-      />
-
-      <Text style={styles.healthLegendLabel}>
+      <Text style={styles.miniMetricLabel}>
         {label}
-      </Text>
-
-      <Text style={styles.healthLegendValue}>
-        {value}
       </Text>
     </View>
   );
@@ -1211,6 +856,10 @@ function HealthLegend({
 ============================================================ */
 
 const styles = StyleSheet.create({
+  /* ==========================================================
+     BASE
+  ========================================================== */
+
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -1243,9 +892,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
 
-  /* ========================================================
+  /* ==========================================================
      HEADER
-  ======================================================== */
+  ========================================================== */
 
   header: {
     flexDirection: 'row',
@@ -1267,6 +916,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+
     shadowColor: '#2563EB',
     shadowOffset: {
       width: 0,
@@ -1305,7 +955,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
   },
 
   headerButton: {
@@ -1318,6 +967,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+
     shadowColor: '#64748B',
     shadowOffset: {
       width: 0,
@@ -1340,9 +990,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.white,
   },
 
-  /* ========================================================
+  /* ==========================================================
      GREETING
-  ======================================================== */
+  ========================================================== */
 
   greetingSection: {
     flexDirection: 'row',
@@ -1356,44 +1006,12 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
 
-  greetingMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-
   greetingEyebrow: {
     fontFamily: 'Jakarta-Bold',
     fontSize: 9,
     color: COLORS.primary,
     letterSpacing: 1.25,
-  },
-
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: COLORS.successSoft,
-    borderWidth: 1,
-    borderColor: COLORS.successBorder,
-  },
-
-  liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.success,
-    marginRight: 4,
-  },
-
-  liveText: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 8,
-    color: COLORS.success,
-    letterSpacing: 0.6,
+    marginBottom: 3,
   },
 
   greetingName: {
@@ -1412,66 +1030,16 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  dateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 118,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-
-  dateIcon: {
-    width: 31,
-    height: 31,
-    borderRadius: 10,
-    backgroundColor: COLORS.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 7,
-  },
-
-  dateLabel: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 7,
-    color: COLORS.textLight,
-    letterSpacing: 0.8,
-    marginBottom: 1,
-  },
-
-  dateValue: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 9,
-    color: COLORS.text,
-  },
-
-  dateTime: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 8,
-    color: COLORS.textMuted,
-    marginTop: 1,
-  },
-
-  /* ========================================================
+  /* ==========================================================
      SMART SCAN
-  ======================================================== */
+  ========================================================== */
 
   scanHero: {
     overflow: 'hidden',
     borderRadius: 24,
-    marginBottom: 26,
+    marginBottom: 27,
     backgroundColor: COLORS.navy,
+
     shadowColor: COLORS.navy,
     shadowOffset: {
       width: 0,
@@ -1564,6 +1132,10 @@ const styles = StyleSheet.create({
     maxWidth: 250,
   },
 
+  /* ==========================================================
+     SCANNER VISUAL
+  ========================================================== */
+
   scanVisual: {
     width: 74,
     height: 74,
@@ -1640,6 +1212,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
+  /* ==========================================================
+     SCAN FEATURES
+  ========================================================== */
+
   scanFeatureRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1670,6 +1246,10 @@ const styles = StyleSheet.create({
     height: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
+
+  /* ==========================================================
+     SCAN BUTTON
+  ========================================================== */
 
   primaryScanButton: {
     height: 48,
@@ -1711,9 +1291,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  /* ========================================================
+  /* ==========================================================
      SECTIONS
-  ======================================================== */
+  ========================================================== */
 
   section: {
     marginBottom: 25,
@@ -1754,529 +1334,206 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  /* ========================================================
-     QUICK ACTIONS
-  ======================================================== */
+  /* ==========================================================
+     INVENTORY CARD
+  ========================================================== */
 
-  actionGrid: {
-    flexDirection: 'row',
-    marginHorizontal: -4,
-  },
-
-  actionCard: {
-    flex: 1,
-    minHeight: 108,
-    marginHorizontal: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    borderRadius: 16,
+  inventoryCard: {
     backgroundColor: COLORS.white,
+    borderRadius: 19,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 15,
+
     shadowColor: '#64748B',
     shadowOffset: {
       width: 0,
       height: 4,
     },
     shadowOpacity: 0.045,
-    shadowRadius: 9,
+    shadowRadius: 10,
     elevation: 2,
   },
 
-  actionIcon: {
+  inventoryMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  inventoryIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: COLORS.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  inventoryMainText: {
+    flex: 1,
+  },
+
+  inventoryLabel: {
+    fontFamily: 'Jakarta-Bold',
+    fontSize: 8,
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 1,
+  },
+
+  inventoryValue: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 27,
+    lineHeight: 31,
+    color: COLORS.primary,
+    letterSpacing: -0.4,
+  },
+
+  inventorySubtitle: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 8.5,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+
+  inventoryDivider: {
+    height: 1,
+    backgroundColor: COLORS.borderLight,
+    marginVertical: 14,
+  },
+
+  /* ==========================================================
+     INVENTORY METRICS
+  ========================================================== */
+
+  inventoryMetrics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  miniMetric: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  miniMetricIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+
+  miniMetricDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
+  miniMetricValue: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 18,
+    lineHeight: 21,
+  },
+
+  miniMetricLabel: {
+    fontFamily: 'Jakarta-Medium',
+    fontSize: 7.5,
+    color: COLORS.textMuted,
+    marginTop: 1,
+    textAlign: 'center',
+  },
+
+  metricDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: COLORS.borderLight,
+  },
+
+  /* ==========================================================
+     NEEDS ATTENTION
+  ========================================================== */
+
+  attentionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+
+    shadowColor: '#64748B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+
+  attentionRow: {
+    minHeight: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+
+  attentionIcon: {
     width: 38,
     height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginRight: 11,
   },
 
-  actionLabel: {
+  attentionContent: {
+    flex: 1,
+    paddingRight: 8,
+  },
+
+  attentionTitle: {
     fontFamily: 'Jakarta-Bold',
-    fontSize: 11,
+    fontSize: 11.5,
     color: COLORS.text,
-  },
-
-  actionDescription: {
-    fontFamily: 'Jakarta-Medium',
-    fontSize: 8,
-    color: COLORS.textMuted,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-
-  /* ========================================================
-     KPI
-  ======================================================== */
-
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-
-  kpiCard: {
-    width: (SCREEN_WIDTH - 44) / 2,
-    minHeight: 145,
-    borderRadius: 18,
-    padding: 15,
-    marginBottom: 10,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.045,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-
-  kpiTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-
-  kpiIcon: {
-    width: 31,
-    height: 31,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  kpiLabel: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 8.5,
-    color: COLORS.textMuted,
-    letterSpacing: 0.7,
     marginBottom: 2,
   },
 
-  kpiValue: {
-    fontFamily: 'Outfit-Bold',
-    fontSize: 29,
-    lineHeight: 34,
-    letterSpacing: -0.5,
-  },
-
-  kpiFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  kpiFooterDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-
-  kpiFooter: {
-    fontFamily: 'Jakarta-SemiBold',
-    fontSize: 9,
-  },
-
-  /* ========================================================
-     STOCK HEALTH
-  ======================================================== */
-
-  healthCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 17,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.045,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-
-  healthHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-
-  healthHeadline: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 12,
-    color: COLORS.text,
-  },
-
-  healthSubline: {
-    fontFamily: 'Jakarta-Medium',
-    fontSize: 9.5,
-    color: COLORS.textMuted,
-    marginTop: 3,
-  },
-
-  healthScore: {
-    alignItems: 'flex-end',
-  },
-
-  healthScoreValue: {
-    fontFamily: 'Outfit-Bold',
-    fontSize: 21,
-    color: COLORS.success,
-  },
-
-  healthScoreLabel: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 7,
-    color: COLORS.success,
-    letterSpacing: 0.6,
-    marginTop: -1,
-  },
-
-  healthBar: {
-    width: '100%',
-    height: 9,
-    borderRadius: 6,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    backgroundColor: COLORS.borderLight,
-    marginBottom: 14,
-  },
-
-  healthSegmentHealthy: {
-    backgroundColor: COLORS.success,
-  },
-
-  healthSegmentLow: {
-    backgroundColor: COLORS.warning,
-  },
-
-  healthSegmentCritical: {
-    backgroundColor: COLORS.critical,
-  },
-
-  healthLegend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  healthLegendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  healthLegendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-
-  healthLegendLabel: {
+  attentionDescription: {
     fontFamily: 'Jakarta-Medium',
     fontSize: 8.5,
     color: COLORS.textMuted,
   },
 
-  healthLegendValue: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 8.5,
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-
-  /* ========================================================
-     EXPIRY
-  ======================================================== */
-
-  expiryCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.045,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-
-  expiryRow: {
-    minHeight: 72,
+  attentionRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    gap: 6,
   },
+
+  attentionValue: {
+    fontFamily: 'Outfit-Bold',
+    fontSize: 18,
+  },
+
+  /* ==========================================================
+     COMMON
+  ========================================================== */
 
   lastRow: {
     borderBottomWidth: 0,
   },
 
-  medicineIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-
-  expiryMedicineInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  expiryMedicineName: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 11.5,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-
-  batchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  batchLabel: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 7,
-    color: COLORS.textLight,
-    letterSpacing: 0.5,
-    marginRight: 4,
-  },
-
-  batchValue: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 8.5,
-    color: COLORS.textMuted,
-  },
-
-  expiryRight: {
-    alignItems: 'flex-end',
-    marginLeft: 6,
-  },
-
-  daysBadge: {
-    minWidth: 36,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 7,
-    alignItems: 'center',
-    backgroundColor: COLORS.orangeSoft,
-    marginBottom: 4,
-  },
-
-  daysBadgeUrgent: {
-    backgroundColor: COLORS.criticalSoft,
-  },
-
-  daysBadgeText: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 9,
-    color: COLORS.orange,
-  },
-
-  daysBadgeTextUrgent: {
-    color: COLORS.critical,
-  },
-
-  expiryDate: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 7.5,
-    color: COLORS.textLight,
-  },
-
-  rowChevron: {
-    marginLeft: 6,
-  },
-
-  /* ========================================================
-     ACTIVITY
-  ======================================================== */
-
-  activityCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.045,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-
-  activityRow: {
-    flexDirection: 'row',
-    minHeight: 82,
-    paddingVertical: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
-
-  activityTimeline: {
-    width: 38,
-    alignItems: 'center',
-    position: 'relative',
-  },
-
-  activityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-  },
-
-  timelineLine: {
-    position: 'absolute',
-    top: 32,
-    bottom: -13,
-    width: 1,
-    backgroundColor: COLORS.border,
-  },
-
-  activityContent: {
-    flex: 1,
-    paddingLeft: 6,
-  },
-
-  activityTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-
-  activityTitle: {
-    fontFamily: 'Jakarta-SemiBold',
-    fontSize: 9.5,
-    color: COLORS.textMuted,
-  },
-
-  activityTime: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 7.5,
-    color: COLORS.textLight,
-  },
-
-  activityMedicine: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 12,
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-
-  activityDetail: {
-    fontFamily: 'Jakarta-Medium',
-    fontSize: 9.5,
-    lineHeight: 14,
-    color: COLORS.textMuted,
-  },
-
-  /* ========================================================
-     SYSTEM STATUS
-  ======================================================== */
-
-  systemStatus: {
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 13,
-    borderRadius: 16,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-
-  systemStatusIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: COLORS.successSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-
-  systemStatusText: {
-    flex: 1,
-  },
-
-  systemStatusTitle: {
-    fontFamily: 'Jakarta-Bold',
-    fontSize: 10.5,
-    color: COLORS.text,
-  },
-
-  systemStatusSubtitle: {
-    fontFamily: 'Jakarta-Medium',
-    fontSize: 8.5,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-
-  syncIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: COLORS.successSoft,
-  },
-
-  syncDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.success,
-    marginRight: 4,
-  },
-
-  syncText: {
-    fontFamily: 'JetBrainsMono-Regular',
-    fontSize: 7,
-    color: COLORS.success,
-    letterSpacing: 0.5,
-  },
-
-  /* ========================================================
-     PRESS
-  ======================================================== */
-
   buttonPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.975 }],
+  },
+
+  rowPressed: {
+    opacity: 0.75,
   },
 });

@@ -413,7 +413,7 @@ export default function SignUpScreen() {
                 />
 
                 <Text style={styles.passwordInfoText}>
-                  Use a password you don't use for other accounts.
+                  Use a password you don&apos;t use for other accounts.
                 </Text>
               </View>
             </View>
