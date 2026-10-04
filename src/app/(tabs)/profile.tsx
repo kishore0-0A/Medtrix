@@ -14,30 +14,33 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
 import { router } from 'expo-router';
 import { Auth } from '../../supabase';
+import { useTranslation } from 'react-i18next';
+
 const SETTINGS_GROUPS = [
   {
-    title: 'Account',
+    titleKey: 'profile.account',
     items: [
-      { id: '1', icon: 'person-outline', label: 'Personal Information' },
-      { id: '2', icon: 'business-outline', label: 'Hospital Affiliation' },
+      { id: '1', icon: 'person-outline', labelKey: 'profile.personal_info', route: '/profile/personal-info' },
+      { id: '2', icon: 'business-outline', labelKey: 'profile.hospital_affiliation', route: '/profile/hospital' },
     ],
   },
   {
-    title: 'Security',
+    titleKey: 'profile.security',
     items: [
-      { id: '3', icon: 'lock-closed-outline', label: 'Change Password' },
+      { id: '3', icon: 'lock-closed-outline', labelKey: 'profile.change_password', route: '/profile/security' },
     ],
   },
   {
-    title: 'Preferences',
+    titleKey: 'profile.preferences',
     items: [
-      { id: '5', icon: 'notifications-outline', label: 'Push Notifications', type: 'toggle', value: true },
-      { id: '6', icon: 'language-outline', label: 'Language', valueText: 'English' },
+      { id: '5', icon: 'notifications-outline', labelKey: 'profile.push_notifications', route: '/profile/notifications' },
+      { id: '6', icon: 'language-outline', labelKey: 'profile.language', route: '/profile/language' },
     ],
   },
 ];
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const [toggles, setToggles] = React.useState<Record<string, boolean>>({
     '4': false,
     '5': true,
@@ -78,39 +81,24 @@ export default function ProfileScreen() {
 
         {/* SETTINGS GROUPS (LEVEL 2 GLASS) */}
         {SETTINGS_GROUPS.map((group) => (
-          <View key={group.title} style={styles.groupContainer}>
-            <Text style={styles.groupTitle}>{group.title}</Text>
+          <View key={group.titleKey} style={styles.groupContainer}>
+            <Text style={styles.groupTitle}>{t(group.titleKey)}</Text>
             <View style={[styles.glassGroup, GLASS.standard]}>
               {group.items.map((item, index) => (
-                <View 
+                <Pressable 
                   key={item.id} 
                   style={[
                     styles.settingRow, 
                     index !== group.items.length - 1 && styles.settingRowBorder
                   ]}
+                  onPress={() => item.route && router.push(item.route as any)}
                 >
                   <View style={styles.settingRowLeft}>
                     <Ionicons name={item.icon as any} size={20} color={COLORS.text.secondary} style={styles.settingIcon} />
-                    <Text style={styles.settingLabel}>{item.label}</Text>
+                    <Text style={styles.settingLabel}>{t(item.labelKey)}</Text>
                   </View>
-                  {(item as any).type === 'toggle' ? (
-                    <Switch
-                      trackColor={{ false: COLORS.border.subtle, true: COLORS.brand.primary }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor={COLORS.border.subtle}
-                      onValueChange={() => toggleSwitch(item.id)}
-                      value={toggles[item.id]}
-                      style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                    />
-                  ) : (item as any).valueText ? (
-                    <View style={styles.settingRowRight}>
-                      <Text style={styles.settingValueText}>{(item as any).valueText}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={COLORS.text.muted} />
-                    </View>
-                  ) : (
-                    <Ionicons name="chevron-forward" size={16} color={COLORS.text.muted} />
-                  )}
-                </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.text.muted} />
+                </Pressable>
               ))}
             </View>
           </View>
@@ -119,7 +107,7 @@ export default function ProfileScreen() {
         {/* LOGOUT BUTTON */}
         <Pressable style={[styles.logoutButton, GLASS.secondary]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={COLORS.status.critical} style={styles.logoutIcon} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </Pressable>
 
         <View style={{ height: 100 }} />

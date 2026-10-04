@@ -1,0 +1,47 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading...",
+    "search": "Search",
+    "confirm": "Confirm",
+    "close": "Close"
+  },
+  "profile": {
+    "home": "Home",
+    "inventory": "Inventory",
+    "scan": "Scan",
+    "alerts": "Alerts",
+    "profile": "Profile",
+    "personal_info": "Personal Information",
+    "hospital_affiliation": "Hospital Affiliation",
+    "security": "Security",
+    "language": "Language",
+    "push_notifications": "Push Notifications"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "low_stock": "Low Stock",
+    "expiring_soon": "Expiring Soon",
+    "recent_activity": "Recent Activity",
+    "view_all": "View All"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "add_medicine": "Add Medicine",
+    "stock_in": "Stock In",
+    "stock_out": "Stock Out",
+    "batch": "Batch",
+    "expiry": "Expiry"
+  },
+  "checkout": {
+    "title": "Sales & Checkout",
+    "cart": "Cart",
+    "total": "Total",
+    "pay_now": "Pay Now",
+    "empty_cart": "Cart is empty",
+    "scan_medicine": "Scan Medicine"
+  }
+}

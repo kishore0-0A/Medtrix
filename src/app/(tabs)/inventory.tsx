@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
 import { Database } from '../../supabase';
@@ -51,7 +51,7 @@ export default function InventoryScreen() {
     const { data, error: inventoryError } = await Database.getInventory();
 
     if (inventoryError) {
-      console.error(inventoryError);
+      console.log(inventoryError);
       setError(
         (inventoryError as Error).message ||
           'Could not load inventory. Check Supabase table setup and connection.',
@@ -168,6 +168,19 @@ export default function InventoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => loadInventory(true)} />
         }
       >
+        <Pressable 
+          style={[styles.importActionCard, GLASS.standard]} 
+          onPress={() => router.push('/bulk-import')}
+        >
+          <View style={styles.importIconContainer}>
+            <Ionicons name="document-text-outline" size={24} color={COLORS.brand.primary} />
+          </View>
+          <View style={styles.importTextContainer}>
+            <Text style={styles.importActionTitle}>Upload Invoice</Text>
+            <Text style={styles.importActionSub}>Import multiple medicines from one PDF</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.text.muted} />
+        </Pressable>
         {loading && (
           <View style={[styles.stateCard, GLASS.standard]}>
             <ActivityIndicator color={COLORS.brand.primary} />
@@ -435,4 +448,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyBold,
     fontSize: 11,
   },
+  importActionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 16, backgroundColor: 'rgba(37, 99, 235, 0.05)', borderWidth: 1, borderColor: COLORS.brand.verySoft },
+  importIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(37, 99, 235, 0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  importTextContainer: { flex: 1 },
+  importActionTitle: { ...TYPOGRAPHY.heading, fontSize: 16, color: COLORS.text.primary, marginBottom: 2 },
+  importActionSub: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.text.secondary },
 });

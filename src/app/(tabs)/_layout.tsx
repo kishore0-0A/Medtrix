@@ -116,7 +116,10 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   );
 }
 
+import { useTranslation } from 'react-i18next';
+
 export default function TabsLayout() {
+  const { t } = useTranslation();
   return (
     <Tabs
       screenOptions={{
@@ -127,31 +130,31 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('profile.home'),
         }}
       />
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'Inventory',
+          title: t('profile.inventory'),
         }}
       />
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan',
+          title: t('profile.scan'),
         }}
       />
       <Tabs.Screen
         name="alerts"
         options={{
-          title: 'Alerts',
+          title: t('profile.alerts'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('profile.profile'),
         }}
       />
     </Tabs>

@@ -1,0 +1,47 @@
+{
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "success": "सफलता",
+    "error": "त्रुटि",
+    "loading": "लोड हो रहा है...",
+    "search": "खोजें",
+    "confirm": "पुष्टि करें",
+    "close": "बंद करें"
+  },
+  "profile": {
+    "home": "होम",
+    "inventory": "इन्वेंटरी",
+    "scan": "स्कैन",
+    "alerts": "अलर्ट",
+    "profile": "प्रोफ़ाइल",
+    "personal_info": "व्यक्तिगत जानकारी",
+    "hospital_affiliation": "अस्पताल संबद्धता",
+    "security": "सुरक्षा",
+    "language": "भाषा",
+    "push_notifications": "सूचनाएं"
+  },
+  "dashboard": {
+    "welcome": "वापसी पर स्वागत है",
+    "low_stock": "कम स्टॉक",
+    "expiring_soon": "जल्द समाप्त होने वाला",
+    "recent_activity": "हाल की गतिविधि",
+    "view_all": "सभी देखें"
+  },
+  "inventory": {
+    "title": "इन्वेंटरी",
+    "add_medicine": "दवा जोड़ें",
+    "stock_in": "स्टॉक इन",
+    "stock_out": "स्टॉक आउट",
+    "batch": "बैच",
+    "expiry": "समाप्ति"
+  },
+  "checkout": {
+    "title": "बिक्री और चेकआउट",
+    "cart": "कार्ट",
+    "total": "कुल",
+    "pay_now": "अभी भुगतान करें",
+    "empty_cart": "कार्ट खाली है",
+    "scan_medicine": "दवा स्कैन करें"
+  }
+}

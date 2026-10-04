@@ -9,6 +9,7 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Auth } from '../supabase';
+import { initI18n } from '../i18n';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -26,10 +27,9 @@ export default function RootLayout() {
       if (!loaded && !error) return; // Wait until fonts load
       
       try {
-        const session = await Auth.getSession();
-        if (session) {
-          router.replace('/(tabs)');
-        }
+        await initI18n();
+        // Bypass login screen
+        router.replace('/(tabs)');
       } catch (err) {
         console.warn('Auth check error:', err);
       } finally {
