@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from '
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FloatingAssistant from '../../components/FloatingAssistant';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 
 const { width } = Dimensions.get('window');
@@ -121,6 +122,7 @@ import { useTranslation } from 'react-i18next';
 export default function TabsLayout() {
   const { t } = useTranslation();
   return (
+    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -158,6 +160,8 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    <FloatingAssistant />
+    </>
   );
 }
 

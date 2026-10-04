@@ -35,7 +35,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Medtrix to access your microphone for voice assistance."
+        }
+      ],
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

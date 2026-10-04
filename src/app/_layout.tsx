@@ -8,9 +8,14 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { LogBox } from 'react-native';
 import { Auth } from '../supabase';
 import { initI18n } from '../i18n';
 SplashScreen.preventAutoHideAsync();
+
+LogBox.ignoreLogs([
+  "Can't perform a React state update on a component that hasn't mounted yet",
+]);
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -28,8 +33,6 @@ export default function RootLayout() {
       
       try {
         await initI18n();
-        // Bypass login screen
-        router.replace('/(tabs)');
       } catch (err) {
         console.warn('Auth check error:', err);
       } finally {
@@ -40,6 +43,12 @@ export default function RootLayout() {
     
     checkAuthAndRoute();
   }, [loaded, error]);
+
+  useEffect(() => {
+    if (loaded && authChecked) {
+      setTimeout(() => router.replace('/(tabs)'), 0);
+    }
+  }, [loaded, authChecked]);
 
   if (!loaded || !authChecked) {
     return null;

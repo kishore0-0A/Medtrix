@@ -711,7 +711,14 @@ export default function ScanScreen() {
             <Pressable style={styles.secondaryButtonFlex} onPress={() => setScanState('quantity_input')}>
               <Text style={styles.secondaryButtonText}>Back & Edit</Text>
             </Pressable>
-            <Pressable style={styles.primaryButtonFlex} onPress={() => scanMode === 'stock_in' ? handleSaveToInventory() : setScanState('payment_selection')}>
+            <Pressable style={styles.primaryButtonFlex} onPress={() => {
+              if (scanMode === 'stock_in') {
+                handleSaveToInventory();
+              } else {
+                setOrderId(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+                setScanState('payment_selection');
+              }
+            }}>
               <Text style={styles.primaryButtonText}>{scanMode === 'stock_in' ? 'Confirm & Add' : 'Proceed to Payment'}</Text>
             </Pressable>
           </View>
@@ -720,7 +727,7 @@ export default function ScanScreen() {
 
       {scanState === 'payment_selection' && (() => {
         const totalAmount = parseInt(quantity || '0', 10) * 150; // Mock unit price ₹150 for prototype
-        const orderId = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+        
         const qrPayload = `upi://pay?pa=demo@medtrix&pn=MedtrixStore&tr=${orderId}&am=${totalAmount}&cu=INR`;
 
         return (

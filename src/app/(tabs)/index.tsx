@@ -14,6 +14,7 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import {
   Ionicons,
@@ -108,6 +109,7 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 ============================================================ */
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   /* ----------------------------------------------------------
      Entrance animations
   ---------------------------------------------------------- */
@@ -378,7 +380,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ===================================================
-            SMART SCAN HERO
+            {t('dashboard.smart_scan').toUpperCase()} HERO
         =================================================== */}
 
         <Animated.View
@@ -401,9 +403,7 @@ export default function HomeScreen() {
                 <View style={styles.scanLabelRow}>
                   <View style={styles.scanStatusDot} />
 
-                  <Text style={styles.scanLabel}>
-                    SMART SCAN
-                  </Text>
+                  <Text style={styles.scanLabel}>{t('dashboard.smart_scan').toUpperCase()}</Text>
 
                   <View style={styles.ocrTag}>
                     <Text style={styles.ocrTagText}>
@@ -412,10 +412,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.scanTitle}>
-                  Identify medicine{'\n'}
-                  in seconds.
-                </Text>
+                <Text style={styles.scanTitle}>{t('dashboard.identify_medicine')}</Text>
 
                 <Text style={styles.scanDescription}>
                   Capture a medicine package to extract

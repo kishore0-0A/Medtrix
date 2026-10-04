@@ -19,14 +19,27 @@
     "hospital_affiliation": "Hospital Affiliation",
     "security": "Security",
     "language": "Language",
-    "push_notifications": "Push Notifications"
+    "push_notifications": "Push Notifications",
+    "barcode_stock_check": "Barcode Stock Check",
+    "barcode_stock_desc": "Scan a barcode to instantly check inventory status.",
+    "ai_triage": "AI Triage - Smart Stock Advisor",
+    "ai_triage_desc": "Analyze stock trends and get purchase recommendations."
   },
   "dashboard": {
     "welcome": "Welcome back",
     "low_stock": "Low Stock",
     "expiring_soon": "Expiring Soon",
     "recent_activity": "Recent Activity",
-    "view_all": "View All"
+    "view_all": "View All",
+    "identify_medicine": "Identify the Medicine",
+    "smart_scan": "Smart Scan",
+    "medicine_management": "Medicine Management",
+    "update_invoice": "Update Invoice",
+    "search_medicines": "Search Medicines",
+    "total_medicines": "Total Medicines",
+    "out_of_stock": "Out of Stock",
+    "upload_invoice": "Upload Invoice",
+    "bulk_import": "Import multiple medicines from one PDF"
   },
   "inventory": {
     "title": "Inventory",
@@ -43,5 +56,37 @@
     "pay_now": "Pay Now",
     "empty_cart": "Cart is empty",
     "scan_medicine": "Scan Medicine"
+  },
+  "ai_triage": {
+    "title": "Smart Stock Advisor",
+    "report_title": "Weekly Inventory Report",
+    "generate_report": "Generate Report",
+    "low_stock_warnings": "Low Stock Warnings",
+    "seasonal_trends": "Seasonal Trends",
+    "ask_question": "Ask inventory questions...",
+    "insufficient_data": "Insufficient historical data for seasonal forecasting.",
+    "no_data": "No data available."
+  },
+  "assistant": {
+    "welcome": "Hello! I am Medtrix AI. How can I help you today?",
+    "suggestion_1": "How do I add medicine?",
+    "suggestion_2": "How do I scan a barcode?",
+    "suggestion_3": "How do I generate a weekly stock report?",
+    "suggestion_4": "Where can I change my language?",
+    "listening": "Listening...",
+    "stop": "Stop",
+    "speak": "Speak",
+    "type_message": "Ask anything about Medtrix...",
+    "processing": "Thinking...",
+    "error_mic": "Microphone permission is required to use voice features.",
+    "error_speech": "Speech recognition error occurred.",
+    "error_tts": "Text-to-speech unavailable for this language.",
+    "label": "Ask Medtrix AI",
+    "q1": "How do I use this app?",
+    "q2": "How do I add a medicine?",
+    "q3": "How do I scan a barcode?",
+    "q4": "How do I upload an invoice?",
+    "q5": "How can I check stock and expiry?",
+    "q6": "What should I reorder this week?"
   }
 }

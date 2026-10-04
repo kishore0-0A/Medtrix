@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View, Text, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 type ImportState = 'idle' | 'uploading' | 'processing' | 'review' | 'success';
 
 export default function BulkImportScreen() {
+  const { t, i18n } = useTranslation();
   const [importState, setImportState] = useState<ImportState>('idle');
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
@@ -92,7 +94,8 @@ export default function BulkImportScreen() {
             <Text style={styles.sectionTitle}>Detected Medicines (2)</Text>
             
             <View style={[styles.itemCard, GLASS.secondary]}>
-              <Text style={styles.itemName}>Amoxicillin 500mg</Text>
+              <Text style={styles.itemName}>{i18n.language === 'ta' ? 'அமாக்சிசிலின் 500 மி.கி' : i18n.language === 'hi' ? 'अमोक्सिसिलिन 500mg' : 'Amoxicillin 500mg'}</Text>
+              <Text style={{ fontSize: 12, color: COLORS.text.muted }}>Original text: Amoxicillin 500mg</Text>
               <View style={styles.itemRow}>
                 <Text style={styles.itemDetail}>Batch: B-7721</Text>
                 <Text style={styles.itemDetail}>Exp: 12/2026</Text>
@@ -104,7 +107,8 @@ export default function BulkImportScreen() {
             </View>
 
             <View style={[styles.itemCard, GLASS.secondary]}>
-              <Text style={styles.itemName}>Paracetamol 250mg</Text>
+              <Text style={styles.itemName}>{i18n.language === 'ta' ? 'பாராசிட்டமால் 250 மி.கி' : i18n.language === 'hi' ? 'पैरासिटामोल 250mg' : 'Paracetamol 250mg'}</Text>
+              <Text style={{ fontSize: 12, color: COLORS.text.muted }}>Original text: Paracetamol 250mg</Text>
               <View style={styles.itemRow}>
                 <Text style={styles.itemDetail}>Batch: P-102</Text>
                 <Text style={styles.itemDetail}>Exp: 08/2025</Text>

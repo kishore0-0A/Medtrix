@@ -15,11 +15,9 @@ export default function PersonalInfoScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  
 
-  const loadProfile = async () => {
+  async function loadProfile() {
     try {
       const user = await AuthHelpers.getCurrentUser();
       if (user) {
@@ -33,6 +31,10 @@ export default function PersonalInfoScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   const validate = () => {
     if (!name.trim()) return 'Name is required';

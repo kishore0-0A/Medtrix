@@ -22,8 +22,9 @@ type CheckoutState = 'browsing' | 'camera' | 'processing' | 'ocr_review' | 'quan
 type PaymentMethod = 'gpay' | 'phonepe' | 'paytm' | 'card' | 'cash' | 'demo';
 
 export default function CheckoutScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>('browsing');
+  const [orderId, setOrderId] = useState('ORD-123456');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -288,7 +289,7 @@ export default function CheckoutScreen() {
                   {cart.map(item => (
                     <View key={item.batch.id} style={styles.cartItemCard}>
                       <View style={{flex: 1}}>
-                        <Text style={styles.cartItemName}>{item.batch.name}</Text>
+                        <Text style={styles.cartItemName}>{item.batch.translations?.[i18n.language]?.name || item.batch.name}</Text>
                         <Text style={styles.cartItemSub}>Batch: {item.batch.batchNumber}</Text>
                         <Text style={styles.cartItemPrice}>₹150 x {item.quantity}</Text>
                       </View>
@@ -315,7 +316,10 @@ export default function CheckoutScreen() {
 
           {cart.length > 0 && (
             <View style={styles.bottomActions}>
-              <Pressable style={styles.primaryButton} onPress={() => setCheckoutState('payment_selection')}>
+              <Pressable style={styles.primaryButton} onPress={() => {
+                setOrderId(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+                setCheckoutState('payment_selection');
+              }}>
                 <Text style={styles.primaryButtonText}>Proceed to Checkout (₹{calculateTotal()})</Text>
               </Pressable>
             </View>
@@ -401,7 +405,7 @@ export default function CheckoutScreen() {
               <Text style={styles.sectionTitle}>Inventory Match</Text>
               {matchedBatch ? (
                 <>
-                  <View style={styles.finalRow}><Text style={styles.cartItemSub}>Matched Item</Text><Text style={styles.cartItemName}>{matchedBatch.name}</Text></View>
+                  <View style={styles.finalRow}><Text style={styles.cartItemSub}>Matched Item</Text><Text style={styles.cartItemName}>{matchedBatch.translations?.[i18n.language]?.name || matchedBatch.name}</Text></View>
                   <View style={styles.finalRow}><Text style={styles.cartItemSub}>Stock Batch</Text><Text style={styles.cartItemName}>{matchedBatch.batchNumber}</Text></View>
                   <View style={[styles.finalRow, {borderBottomWidth: 0}]}><Text style={styles.cartItemSub}>Available Quantity</Text><Text style={[styles.cartItemName, {color: COLORS.status.healthy}]}>{matchedBatch.quantity} units</Text></View>
                 </>
@@ -438,7 +442,7 @@ export default function CheckoutScreen() {
           </View>
           <View style={styles.content}>
             <View style={styles.cartContainer}>
-              <Text style={styles.sectionTitle}>{matchedBatch.name}</Text>
+              <Text style={styles.sectionTitle}>{matchedBatch.translations?.[i18n.language]?.name || matchedBatch.name}</Text>
               <Text style={styles.cartItemSub}>Available Stock: {matchedBatch.quantity}</Text>
               
               <View style={{marginTop: 24}}>
@@ -463,7 +467,7 @@ export default function CheckoutScreen() {
 
       {checkoutState === 'payment_selection' && (() => {
         const totalAmount = calculateTotal();
-        const orderId = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+        
         const qrPayload = `upi://pay?pa=demo@medtrix&pn=MedtrixStore&tr=${orderId}&am=${totalAmount}&cu=INR`;
 
         return (

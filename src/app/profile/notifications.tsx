@@ -15,12 +15,9 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [permissionGranted, setPermissionGranted] = useState(false);
 
-  useEffect(() => {
-    loadNotifications();
-    checkPushPermissions();
-  }, []);
+  
 
-  const checkPushPermissions = async () => {
+  async function checkPushPermissions() {
     // Mocked for Expo Go compatibility
     setPermissionGranted(false);
   };
@@ -30,13 +27,18 @@ export default function NotificationsScreen() {
     setPermissionGranted(false);
   };
 
-  const loadNotifications = async () => {
+  async function loadNotifications() {
     const { data } = await Database.getNotifications();
     if (data) {
       setNotifications(data);
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadNotifications();
+    checkPushPermissions();
+  }, []);
 
   const markAsRead = async (id: string) => {
     await Database.markNotificationRead(id);

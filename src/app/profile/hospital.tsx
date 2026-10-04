@@ -12,9 +12,7 @@ export default function HospitalScreen() {
   const [loading, setLoading] = useState(true);
   const [hospital, setHospital] = useState<{name: string, role: string, dept: string} | null>(null);
   
-  useEffect(() => {
-    loadHospital();
-  }, []);
+  
 
   const loadHospital = async () => {
     try {
@@ -32,6 +30,10 @@ export default function HospitalScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadHospital();
+  }, []);
 
   if (loading) {
     return (

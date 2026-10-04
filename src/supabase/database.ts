@@ -26,6 +26,7 @@ export interface MedicineRow {
   warnings?: string | null;
   customer_care?: string | null;
   website?: string | null;
+  translations?: any;
 }
 
 export interface BatchRow {
@@ -51,13 +52,14 @@ export interface BatchRow {
 export type InventoryStatus = 'healthy' | 'low' | 'expiring' | 'critical';
 
 export interface InventoryItem {
-  id: string;
+  id: string; // batch id
   medicineId: string;
   name: string;
   genericName: string | null;
   activeIngredient: string | null;
   composition: string | null;
   strength: string | null;
+  translations?: any;
   form: string | null;
   manufacturer: string | null;
   manufacturerAddress: string | null;
@@ -281,6 +283,8 @@ function toInventoryItem(
 
     name: medicine?.name ?? '',
 
+    translations: medicine?.translations ?? null,
+
     genericName:
       medicine?.generic_name ?? null,
 
@@ -402,6 +406,10 @@ export const Database = {
             genericName: 'Amoxicillin',
             strength: '500mg',
             form: 'Capsule',
+            translations: {
+              ta: { name: 'அமாக்சிசிலின் 500 மி.கி', generic_name: 'அமாக்சிசிலின்' },
+              hi: { name: 'अमोक्सिसिलिन 500mg', generic_name: 'अमोक्सिसिलिन' }
+            },
             batchNumber: 'B-7721',
             quantity: 120,
             expiryDate: '12/2026',
@@ -414,6 +422,10 @@ export const Database = {
             genericName: 'Paracetamol',
             strength: '250mg',
             form: 'Tablet',
+            translations: {
+              ta: { name: 'பாராசிட்டமால் 250 மி.கி', generic_name: 'பாராசிட்டமால்' },
+              hi: { name: 'पैरासिटामोल 250mg', generic_name: 'पैरासिटामोल' }
+            },
             batchNumber: 'P-102',
             quantity: 15,
             expiryDate: '08/2025',
@@ -846,10 +858,11 @@ export const Database = {
   // ==========================================================
   async findBatchesByMedicineName(medicineName: string) {
     try {
+      const searchPattern = `%${medicineName.trim()}%`;
       const { data: medicines, error: medError } = await supabase
         .from('medicines')
         .select('*')
-        .ilike('name', `%${medicineName.trim()}%`)
+        .or(`name.ilike.${searchPattern},translations->ta->>name.ilike.${searchPattern},translations->hi->>name.ilike.${searchPattern}`)
         .limit(1);
 
       if (medError) return { data: null, error: medError };

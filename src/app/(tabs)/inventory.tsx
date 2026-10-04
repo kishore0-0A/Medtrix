@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { useLocalizedMedicine } from '../../hooks/useLocalizedMedicine';
 import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
 import { Database } from '../../supabase';
 import type { InventoryItem, InventoryStatus } from '../../supabase/database';
@@ -32,6 +34,7 @@ const formatInventoryCount = (items: InventoryItem[]) => {
 };
 
 export default function InventoryScreen() {
+  const { t, i18n } = useTranslation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -214,9 +217,9 @@ export default function InventoryScreen() {
           <View key={item.id} style={[styles.medicineCard, GLASS.standard]}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleCol}>
-                <Text style={styles.medicineName}>{item.name}</Text>
+                <Text style={styles.medicineName}>{item.translations?.[i18n.language]?.name || item.name}</Text>
                 <Text style={styles.medicineStrength}>
-                  {[item.strength, item.form].filter(Boolean).join(' - ') || 'Medicine'}
+                  {[item.translations?.[i18n.language]?.strength || item.strength, item.translations?.[i18n.language]?.form || item.form].filter(Boolean).join(' - ') || 'Medicine'}
                 </Text>
               </View>
               <View style={styles.quantityContainer}>
