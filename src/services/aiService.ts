@@ -4,7 +4,7 @@ import i18n from '../i18n';
 
 export interface AIResponse {
   answer: string;
-  action?: 'NAVIGATE' | 'NONE';
+  action?: 'NAVIGATE' | 'NONE' | 'GENERATE_REPORT';
   route?: string;
 }
 
@@ -20,11 +20,11 @@ export async function askAssistant(question: string, language: string, currentPa
       return { answer: data.answer, action: data.action, route: data.route };
     }
   } catch (error) {
-    console.log("Backend AI unavailable, falling back to local context logic", error);
+    // Silently fall back to local context logic
   }
   const lowerText = question.toLowerCase();
   let reply = "";
-  let action: 'NAVIGATE' | 'NONE' = 'NONE';
+  let action: 'NAVIGATE' | 'NONE' | 'GENERATE_REPORT' = 'NONE';
   let route = "";
 
   if (lowerText.includes("where am i") || lowerText.includes("நான் எங்கே இருக்கிறேன்") || lowerText.includes("मैं कहाँ हूँ")) {
@@ -92,12 +92,12 @@ export async function askAssistant(question: string, language: string, currentPa
             "Let me open the Alerts tab so you can see low stock, FEFO tracking, and expiring items.";
     action = 'NAVIGATE';
     route = '/(tabs)/alerts';
-  } else if (lowerText.includes("triage") || lowerText.includes("report") || lowerText.includes("reorder") || lowerText.includes("analytics") || lowerText.includes("மறுவரிசை") || lowerText.includes("रीऑर्डर")) {
-    reply = language === 'ta' ? "AI Triage பக்கத்தில் உள்ள அறிக்கை, குறையும் சரக்கு மற்றும் மறுவரிசை பரிந்துரைகளை காட்டும்." :
-            language === 'hi' ? "AI Triage पेज में रिपोर्ट आपको कम स्टॉक वाले आइटम और रीऑर्डर सिफारिशें दिखाएगी।" :
-            "The Weekly AI Report in the AI Triage section tells you exactly what items are running low and gives reorder recommendations. Let's go to your Profile.";
-    action = 'NAVIGATE';
-    route = '/(tabs)/profile';
+  } else if (lowerText.includes("triage") || lowerText.includes("report") || lowerText.includes("ரிப்போர்ட்") || lowerText.includes("reorder") || lowerText.includes("analytics") || lowerText.includes("மறுவரிசை") || lowerText.includes("रीऑर्डर") || lowerText.includes("அறிக்கை")) {
+    reply = language === 'ta' ? "உங்களுக்கான AI அறிக்கையை இப்போதே உருவாக்குகிறேன்..." :
+            language === 'hi' ? "मैं अभी आपके लिए AI रिपोर्ट तैयार कर रहा हूँ..." :
+            "Generating your Medtrix AI Triage Report with bar graphs and analytics right now...";
+    action = 'GENERATE_REPORT';
+    route = lowerText.includes("month") || lowerText.includes("மாதாந்திர") || lowerText.includes("मासिक") ? 'Monthly Report' : 'Weekly Report';
   } else if (lowerText.includes("password") || lowerText.includes("security") || lowerText.includes("notification") || lowerText.includes("language") || lowerText.includes("மொழி") || lowerText.includes("भाषा")) {
     reply = language === 'ta' ? "Profile பக்கத்திற்குச் சென்று, Language மற்றும் Security விருப்பங்களை மாற்றவும்." :
             language === 'hi' ? "Profile पृष्ठ पर जाएं और Language और Security विकल्प बदलें।" :

@@ -928,7 +928,7 @@ export default function SplashScreen() {
           goToLogin();
         }
       });
-    }, 5800);
+    }, 1200);
 
     return () => {
       mounted = false;
@@ -1407,13 +1407,13 @@ export default function SplashScreen() {
       ====================================================== */}
 
       <Animated.View
-        pointerEvents="none"
         style={[
           styles.exitOverlay,
           {
             opacity: exitOpacity,
             transform: [{ scale: exitScale }],
           },
+          { pointerEvents: 'none' }
         ]}
       />
     </View>

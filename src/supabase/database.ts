@@ -950,5 +950,56 @@ export const Database = {
       return { error: null };
     }
     return supabase.from('notifications').update({ is_read: true }).eq('id', id);
+  },
+
+  async updateInventoryQuantity(batchId: string, transactionType: 'received' | 'dispensed', quantityChange: number, currentQuantity: number) {
+    const newQuantity = transactionType === 'received' ? currentQuantity + quantityChange : Math.max(0, currentQuantity - quantityChange);
+    
+    // Update batch quantity
+    const batchRes = await supabase.from('medicine_batches').update({ quantity: newQuantity }).eq('id', batchId);
+    if (batchRes.error) return { data: null, error: batchRes.error };
+
+    // Record transaction
+    const txRes = await supabase.from('inventory_transactions').insert({
+      medicine_batch_id: batchId,
+      transaction_type: transactionType,
+      quantity: quantityChange,
+      notes: `Manual ${transactionType}`
+    });
+
+    return { data: newQuantity, error: txRes.error };
+  },
+
+  async getInventoryTransactions() {
+    if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      const now = Date.now();
+      const day = 86400000;
+      return {
+        data: [
+          // Amoxicillin 500mg (mock-1) historical sales
+          { id: 'tx-1', medicine_batch_id: 'mock-1', transaction_type: 'dispensed', quantity: 30, created_at: new Date(now - day * 2).toISOString(), medicine_batches: { medicine_id: 'med-1', quantity: 120, medicines: { name: 'Amoxicillin 500mg' } } },
+          { id: 'tx-2', medicine_batch_id: 'mock-1', transaction_type: 'dispensed', quantity: 40, created_at: new Date(now - day * 5).toISOString(), medicine_batches: { medicine_id: 'med-1', quantity: 120, medicines: { name: 'Amoxicillin 500mg' } } },
+          { id: 'tx-3', medicine_batch_id: 'mock-1', transaction_type: 'received', quantity: 100, created_at: new Date(now - day * 10).toISOString(), medicine_batches: { medicine_id: 'med-1', quantity: 120, medicines: { name: 'Amoxicillin 500mg' } } },
+          { id: 'tx-4', medicine_batch_id: 'mock-1', transaction_type: 'dispensed', quantity: 20, created_at: new Date(now - day * 15).toISOString(), medicine_batches: { medicine_id: 'med-1', quantity: 120, medicines: { name: 'Amoxicillin 500mg' } } },
+          
+          // Paracetamol 250mg (mock-2) historical sales
+          { id: 'tx-5', medicine_batch_id: 'mock-2', transaction_type: 'dispensed', quantity: 50, created_at: new Date(now - day * 1).toISOString(), medicine_batches: { medicine_id: 'med-2', quantity: 15, medicines: { name: 'Paracetamol 250mg' } } },
+          { id: 'tx-6', medicine_batch_id: 'mock-2', transaction_type: 'dispensed', quantity: 60, created_at: new Date(now - day * 8).toISOString(), medicine_batches: { medicine_id: 'med-2', quantity: 15, medicines: { name: 'Paracetamol 250mg' } } },
+          { id: 'tx-7', medicine_batch_id: 'mock-2', transaction_type: 'received', quantity: 50, created_at: new Date(now - day * 14).toISOString(), medicine_batches: { medicine_id: 'med-2', quantity: 15, medicines: { name: 'Paracetamol 250mg' } } },
+          { id: 'tx-8', medicine_batch_id: 'mock-2', transaction_type: 'dispensed', quantity: 10, created_at: new Date(now - day * 20).toISOString(), medicine_batches: { medicine_id: 'med-2', quantity: 15, medicines: { name: 'Paracetamol 250mg' } } },
+          
+          // Cetirizine (mock-3 - not in inventory but historically sold)
+          { id: 'tx-9', medicine_batch_id: 'mock-3', transaction_type: 'received', quantity: 200, created_at: new Date(now - day * 25).toISOString(), medicine_batches: { medicine_id: 'med-3', quantity: 180, medicines: { name: 'Cetirizine 10mg' } } },
+          { id: 'tx-10', medicine_batch_id: 'mock-3', transaction_type: 'dispensed', quantity: 20, created_at: new Date(now - day * 18).toISOString(), medicine_batches: { medicine_id: 'med-3', quantity: 180, medicines: { name: 'Cetirizine 10mg' } } },
+          { id: 'tx-11', medicine_batch_id: 'mock-3', transaction_type: 'dispensed', quantity: 5, created_at: new Date(now - day * 4).toISOString(), medicine_batches: { medicine_id: 'med-3', quantity: 180, medicines: { name: 'Cetirizine 10mg' } } },
+        ],
+        error: null
+      };
+    }
+
+    return await supabase
+      .from('inventory_transactions')
+      .select('*, medicine_batches(medicine_id, quantity, medicines(name))')
+      .order('created_at', { ascending: false });
   }
 };

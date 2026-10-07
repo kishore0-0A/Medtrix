@@ -284,13 +284,11 @@ export default function HomeScreen() {
       ===================================================== */}
 
       <View
-        pointerEvents="none"
-        style={styles.backgroundGlowBlue}
+        style={[styles.backgroundGlowBlue, { pointerEvents: 'none' }]}
       />
 
       <View
-        pointerEvents="none"
-        style={styles.backgroundGlowGreen}
+        style={[styles.backgroundGlowGreen, { pointerEvents: 'none' }]}
       />
 
       <ScrollView

@@ -62,7 +62,7 @@ export default function AlertsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.canvas} />
 
       {/* Subtle Background Elements */}
-      <View style={styles.bgGlowTop} pointerEvents="none" />
+      <View style={[styles.bgGlowTop, { pointerEvents: 'none' }]} />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Alerts</Text>

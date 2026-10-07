@@ -5,6 +5,7 @@ import { COLORS, TYPOGRAPHY, GLASS, SHADOWS } from '../theme';
 import { useTranslation } from 'react-i18next';
 import * as Speech from 'expo-speech';
 import { askAssistant } from '../services/aiService';
+import { generateAITriageReport } from '../services/reportService';
 import { router, usePathname } from 'expo-router';
 
 // Import speech recognition safely
@@ -18,7 +19,7 @@ try {
     useSpeechRecognitionEvent = speechModule.useSpeechRecognitionEvent;
   }
 } catch (e) {
-  console.log("expo-speech-recognition module not found or failed to load. Voice input will be mocked.");
+  // Suppressing the error log as requested to keep the console clean
 }
 
 type Message = {
@@ -89,6 +90,9 @@ export default function FloatingAssistant() {
       if (response.action === 'NAVIGATE' && response.route) {
         closeAssistant();
         router.push(response.route as any);
+      } else if (response.action === 'GENERATE_REPORT') {
+        closeAssistant();
+        generateAITriageReport(response.route, i18n.language);
       }
     });
   };

@@ -86,7 +86,7 @@ export default function LoginScreen() {
           BACKGROUND ATMOSPHERE
       ====================================================== */}
 
-      <View pointerEvents="none" style={styles.backgroundLayer}>
+      <View style={[styles.backgroundLayer, { pointerEvents: 'none' }]}>
         <View style={styles.blueGlow} />
         <View style={styles.blueGlowSmall} />
 

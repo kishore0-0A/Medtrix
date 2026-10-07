@@ -63,10 +63,7 @@ export const GLASS = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border.primary,
     borderRadius: 24,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
+    boxShadow: '0px 16px 24px rgba(148, 163, 184, 0.08)',
     elevation: 8,
   },
   // LEVEL 2 — STANDARD GLASS
@@ -75,10 +72,7 @@ export const GLASS = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.70)',
     borderRadius: 20,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
+    boxShadow: '0px 8px 16px rgba(148, 163, 184, 0.05)',
     elevation: 4,
   },
   // LEVEL 3 — SECONDARY GLASS
@@ -92,17 +86,11 @@ export const GLASS = StyleSheet.create({
 
 export const SHADOWS = StyleSheet.create({
   soft: {
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
+    boxShadow: '0px 8px 16px rgba(148, 163, 184, 0.06)',
     elevation: 4,
   },
   medium: {
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
+    boxShadow: '0px 12px 24px rgba(100, 116, 139, 0.08)',
     elevation: 6,
   }
 });

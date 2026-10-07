@@ -116,7 +116,7 @@ export default function InventoryScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.canvas} />
 
-      <View style={styles.bgGlowTop} pointerEvents="none" />
+      <View style={[styles.bgGlowTop, { pointerEvents: 'none' }]} />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inventory</Text>

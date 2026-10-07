@@ -58,7 +58,7 @@ export default function BulkImportScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.bgGlowTop} pointerEvents="none" />
+      <View style={[styles.bgGlowTop, { pointerEvents: 'none' }]} />
       {renderHeader()}
 
       <ScrollView contentContainerStyle={styles.content}>

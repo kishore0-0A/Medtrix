@@ -16,6 +16,7 @@ SplashScreen.preventAutoHideAsync();
 
 LogBox.ignoreLogs([
   "Can't perform a React state update on a component that hasn't mounted yet",
+  "Animated: `useNativeDriver` is not supported",
 ]);
 
 export default function RootLayout() {

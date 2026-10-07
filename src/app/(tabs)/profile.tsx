@@ -64,7 +64,7 @@ export default function ProfileScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.canvas} />
 
       {/* Subtle Background Elements */}
-      <View style={styles.bgGlowTop} pointerEvents="none" />
+      <View style={[styles.bgGlowTop, { pointerEvents: 'none' }]} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         

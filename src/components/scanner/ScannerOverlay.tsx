@@ -43,7 +43,7 @@ export function ScannerOverlay({ items, isScanning }: ScannerOverlayProps) {
   });
 
   return (
-    <View style={styles.overlayContainer} pointerEvents="none">
+    <View style={[styles.overlayContainer, { pointerEvents: 'none' }]}>
 
 
       {/* Render Bounding Boxes */}
