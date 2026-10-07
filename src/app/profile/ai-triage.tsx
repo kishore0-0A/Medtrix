@@ -124,17 +124,33 @@ export default function AiTriageDashboard() {
   const forecast = useMemo(() => {
     return medicineStats.map(m => {
       const avgMonthly = m.stockOut; 
-      const predictedDemand = Math.floor(avgMonthly * 1.15); // +15% AI trend
+      
+      // Dynamic AI Trend Calculation based on historical velocity
+      let trendMultiplier = 1.0;
+      if (avgMonthly > 50) trendMultiplier = 1.25; // +25% surge prediction for high volume
+      else if (avgMonthly > 20) trendMultiplier = 1.15; // +15% increase
+      else if (avgMonthly < 5) trendMultiplier = 0.95; // -5% decrease for slow moving
+      
+      const predictedDemand = Math.floor(avgMonthly * trendMultiplier);
       let recommendedPurchase = predictedDemand + m.safetyStock - m.currentStock;
       if (recommendedPurchase < 0) recommendedPurchase = 0;
       
+      // Run-rate and depletion analysis
+      const dailyUsage = avgMonthly / 30;
+      const daysUntilStockout = dailyUsage > 0 ? Math.floor(m.currentStock / dailyUsage) : 999;
+      
       let priority = 'Low';
-      if (recommendedPurchase > 50) priority = 'High';
-      else if (recommendedPurchase > 20) priority = 'Medium';
+      if (recommendedPurchase > 50 || daysUntilStockout < 14) priority = 'High';
+      else if (recommendedPurchase > 20 || daysUntilStockout < 30) priority = 'Medium';
 
       let reason = 'Stock sufficient';
-      if (priority === 'High') reason = 'High predicted demand';
-      if (priority === 'Medium') reason = 'Increasing usage';
+      if (priority === 'High') {
+        reason = daysUntilStockout < 14 ? `Critical risk: out in ${daysUntilStockout} days` : 'High predicted demand surge';
+      } else if (priority === 'Medium') {
+        reason = 'Increasing usage trend';
+      } else if (m.currentStock > predictedDemand * 2 && predictedDemand > 0) {
+        reason = 'Overstock risk detected';
+      }
 
       return {
         ...m,
@@ -142,7 +158,9 @@ export default function AiTriageDashboard() {
         predictedDemand,
         recommendedPurchase,
         priority,
-        reason
+        reason,
+        daysUntilStockout,
+        trendPct: Math.round((trendMultiplier - 1) * 100)
       };
     }).sort((a, b) => b.recommendedPurchase - a.recommendedPurchase).slice(0, 5);
   }, [medicineStats]);
@@ -151,9 +169,16 @@ export default function AiTriageDashboard() {
 
   const aiInsight = useMemo(() => {
     if (!hasEnoughData) return "Insufficient historical data for accurate prediction.";
+    
+    const topCritical = forecast.find(f => f.priority === 'High');
     const topMed = fastMoving[0]?.name || "various medicines";
     const recommendedCount = forecast.filter(f => f.recommendedPurchase > 0).length;
-    return `Demand for high-usage medicines is expected to increase next month. Additional stock is recommended for medicines with shortage risk, while slow-moving medicines should not be over-purchased.`;
+    
+    if (topCritical) {
+       return `⚠️ URGENT AI ALERT: ${topCritical.name} is facing a severe shortage and is projected to run out in just ${topCritical.daysUntilStockout} days due to a +${topCritical.trendPct}% demand surge. We recommend an immediate purchase of ${topCritical.recommendedPurchase} units. Across the inventory, ${recommendedCount} medicines currently fall below optimal safety thresholds.`;
+    }
+    
+    return `Inventory is relatively stable. ${topMed} continues to show higher usage trends and requires monitoring. In total, ${recommendedCount} medicines are recommended for proactive purchasing next month to maintain safety stock levels.`;
   }, [hasEnoughData, fastMoving, forecast]);
 
   const chartLabels = fastMoving.length > 0 ? fastMoving.map(m => m.name.substring(0, 10)) : ['No Data'];
