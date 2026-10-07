@@ -42,7 +42,8 @@
           "microphonePermission": "Allow Medtrix to access your microphone for voice assistance."
         }
       ],
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

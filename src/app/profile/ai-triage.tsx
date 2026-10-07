@@ -6,6 +6,8 @@ import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Database } from '../../supabase';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 type TriageMessage = {
   id: string;
@@ -81,6 +83,32 @@ export default function AiTriageScreen() {
     }, 1500);
   };
 
+  const exportToPDF = async () => {
+    try {
+      const html = `
+        <html>
+          <body style="font-family: Helvetica, sans-serif; padding: 20px;">
+            <h1 style="color: #2563EB;">Medtrix AI Triage Report</h1>
+            <h2>Inventory Overview</h2>
+            <ul>
+              <li>Total Batches: ${inventoryStats?.totalMedicines}</li>
+              <li>Low Stock: ${inventoryStats?.lowStock}</li>
+              <li>Expiring Soon: ${inventoryStats?.expiringSoon}</li>
+            </ul>
+            <h2>Recommendation</h2>
+            <p>Prioritize reordering critical items immediately.</p>
+          </body>
+        </html>
+      `;
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -88,6 +116,10 @@ export default function AiTriageScreen() {
           <Ionicons name="arrow-back" size={28} color={COLORS.text.primary} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('profile.ai_triage')}</Text>
+        <View style={{flex: 1}} />
+        <Pressable onPress={exportToPDF} style={{padding: 8}}>
+          <Ionicons name="document-text-outline" size={24} color={COLORS.brand.primary} />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.chatContainer}>

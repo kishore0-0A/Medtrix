@@ -20,7 +20,7 @@ export async function askAssistant(question: string, language: string, currentPa
       return { answer: data.answer, action: data.action, route: data.route };
     }
   } catch (error) {
-    console.warn("Backend AI unavailable, falling back to local context logic", error);
+    console.log("Backend AI unavailable, falling back to local context logic", error);
   }
   const lowerText = question.toLowerCase();
   let reply = "";

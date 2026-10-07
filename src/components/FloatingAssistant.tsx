@@ -18,7 +18,7 @@ try {
     useSpeechRecognitionEvent = speechModule.useSpeechRecognitionEvent;
   }
 } catch (e) {
-  console.warn("expo-speech-recognition module not found or failed to load. Voice input will be mocked.");
+  console.log("expo-speech-recognition module not found or failed to load. Voice input will be mocked.");
 }
 
 type Message = {
@@ -49,7 +49,7 @@ export default function FloatingAssistant() {
     ).start();
   }, [pulseAnim]);
 
-  const speak = (text: string) => {
+  const speak = (text: string, onFinish?: () => void) => {
     Speech.stop();
     setIsSpeaking(true);
     let langCode = 'en-US';
@@ -58,8 +58,14 @@ export default function FloatingAssistant() {
     
     Speech.speak(text, {
       language: langCode,
-      onDone: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false)
+      onDone: () => {
+        setIsSpeaking(false);
+        if (onFinish) onFinish();
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        if (onFinish) onFinish();
+      }
     });
   };
 
@@ -78,14 +84,13 @@ export default function FloatingAssistant() {
     const response = await askAssistant(text.trim(), i18n.language, pathname);
     setIsProcessing(false);
     setMessages(prev => [...prev, { id: `msg-${messageIdCounter.current++}`, role: 'assistant', content: response.answer }]);
-    speak(response.answer);
     
-    if (response.action === 'NAVIGATE' && response.route) {
-      setTimeout(() => {
+    speak(response.answer, () => {
+      if (response.action === 'NAVIGATE' && response.route) {
         closeAssistant();
         router.push(response.route as any);
-      }, 1500); // Give user time to read/hear before jumping
-    }
+      }
+    });
   };
 
   // Safe hook call (hook always exists now)
