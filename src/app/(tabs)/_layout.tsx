@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 
+import { useTranslation } from 'react-i18next';
+
 const { width } = Dimensions.get('window');
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
@@ -116,8 +118,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
     </View>
   );
 }
-
-import { useTranslation } from 'react-i18next';
 
 export default function TabsLayout() {
   const { t } = useTranslation();

@@ -1,5 +1,7 @@
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
+import { supabase } from './client';
+
 // MOCK DATA FOR DEVELOPMENT
 const mockUser: User = {
   id: '12345-mock-user-id',
@@ -28,8 +30,6 @@ const notifyListener = (event: AuthChangeEvent, session: Session | null) => {
     authListener(event, session);
   }
 };
-
-import { supabase } from './client';
 
 export const AuthHelpers = {
   async signUp(email: string, password: string, name?: string): Promise<{ data: any, error: Error | null }> {

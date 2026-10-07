@@ -120,14 +120,14 @@ export default function FloatingAssistant() {
     }
   };
 
-  const closeAssistant = () => {
+  function closeAssistant() {
     stopSpeaking();
     if (isListening && ExpoSpeechRecognitionModule) {
       ExpoSpeechRecognitionModule.stop();
     }
     setIsListening(false);
     setIsOpen(false);
-  };
+  }
 
   const startListening = async () => {
     if (isSpeaking) stopSpeaking();
