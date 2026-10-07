@@ -88,5 +88,30 @@
     "q4": "How do I upload an invoice?",
     "q5": "How can I check stock and expiry?",
     "q6": "What should I reorder this week?"
+  },
+  "auth": {
+    "secure_access": "SECURE ACCESS",
+    "welcome_back": "Welcome back.",
+    "subtitle": "Sign in to manage your medical inventory, stock levels and dispensing activity.",
+    "email": "EMAIL",
+    "required": "REQUIRED",
+    "email_placeholder": "name@hospital.org",
+    "password": "PASSWORD",
+    "password_placeholder": "Enter your password",
+    "remember_me": "Remember this device",
+    "forgot_password": "Forgot password?",
+    "sign_in": "Sign In",
+    "authenticating": "AUTHENTICATING...",
+    "security_note": "Secure authentication powered by Medtrix",
+    "or": "OR",
+    "continue_google": "Continue with Google",
+    "google_subtitle": "Use your hospital Google account",
+    "no_account": "Don't have an account?",
+    "create_account": "Create account",
+    "missing_info": "Missing information",
+    "missing_info_desc": "Please enter your email or employee ID and password.",
+    "sign_in_failed": "Sign in failed",
+    "something_wrong": "Something went wrong",
+    "unable_to_sign_in": "Unable to sign in. Please try again."
   }
 }

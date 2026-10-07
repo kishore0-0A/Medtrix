@@ -11,6 +11,7 @@ import {
 import { LogBox } from 'react-native';
 import { Auth } from '../supabase';
 import { initI18n } from '../i18n';
+import FloatingAssistant from '../components/FloatingAssistant';
 SplashScreen.preventAutoHideAsync();
 
 LogBox.ignoreLogs([
@@ -55,10 +56,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+      <FloatingAssistant />
+    </>
   );
 }

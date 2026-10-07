@@ -43,6 +43,7 @@ export default function ScanScreen() {
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<string>('');
   const [amountReceived, setAmountReceived] = useState<string>('');
+  const [orderId, setOrderId] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const beamAnim = useRef(new Animated.Value(0)).current;
 

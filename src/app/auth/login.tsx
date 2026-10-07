@@ -19,11 +19,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 import { Auth } from '../../supabase';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../../i18n';
 /* ============================================================
    LOGIN SCREEN
 ============================================================ */
 
 export default function LoginScreen() {
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -134,10 +137,10 @@ export default function LoginScreen() {
           ================================================== */}
 
           <View style={styles.welcomeArea}>
-            <Text style={styles.eyebrow}>SECURE ACCESS</Text>
+            <Text style={styles.eyebrow}>{t('auth.secure_access')}</Text>
 
             <Text style={styles.title}>
-              Welcome back.
+              {t('auth.welcome_back')}
             </Text>
 
             <Text style={styles.subtitle}>
@@ -193,7 +196,7 @@ export default function LoginScreen() {
                 </View>
 
                 <TextInput
-                  placeholder="name@hospital.org"
+                  placeholder={t('auth.email_placeholder')}
                   placeholderTextColor={COLORS.text.disabled}
                   style={styles.input}
                   keyboardType="email-address"
@@ -247,7 +250,7 @@ export default function LoginScreen() {
                 </View>
 
                 <TextInput
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password_placeholder')}
                   placeholderTextColor={COLORS.text.disabled}
                   style={styles.input}
                   secureTextEntry={!showPassword}
@@ -390,7 +393,7 @@ export default function LoginScreen() {
           <View style={styles.alternativeArea}>
             <View style={styles.dividerRow}>
               <View style={styles.divider} />
-              <Text style={styles.orText}>OR</Text>
+              <Text style={styles.orText}>{t('auth.or')}</Text>
               <View style={styles.divider} />
             </View>
 
