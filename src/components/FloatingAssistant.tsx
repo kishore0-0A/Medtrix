@@ -40,15 +40,25 @@ export default function FloatingAssistant() {
   const messageIdCounter = useRef(1);
   
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(100)).current;
 
   useEffect(() => {
+    // 1. Slide in from bottom
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      tension: 50,
+      friction: 7,
+      useNativeDriver: Platform.OS !== 'web'
+    }).start();
+
+    // 2. Start continuous pulse
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: Platform.OS !== 'web' }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: Platform.OS !== 'web' })
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 2000, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: Platform.OS !== 'web' })
       ])
     ).start();
-  }, [pulseAnim]);
+  }, [pulseAnim, slideAnim]);
 
   const speak = (text: string, onFinish?: () => void) => {
     Speech.stop();
@@ -174,7 +184,7 @@ export default function FloatingAssistant() {
 
   return (
     <>
-      <Animated.View style={[styles.floatingButtonContainer, { transform: [{ scale: pulseAnim }] }]}>
+      <Animated.View style={[styles.floatingButtonContainer, { transform: [{ translateY: slideAnim }, { scale: pulseAnim }] }]}>
         <Pressable style={[styles.floatingButton, GLASS.hero]} onPress={openAssistant}>
           <Text style={styles.robotEmojiSmall}>🤖</Text>
           <Text style={styles.launcherText}>{t('assistant.label')}</Text>

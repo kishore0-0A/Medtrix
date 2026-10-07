@@ -59,25 +59,25 @@ export const TYPOGRAPHY = {
 export const GLASS = StyleSheet.create({
   // LEVEL 1 — HERO GLASS
   hero: {
-    backgroundColor: COLORS.glass.primary,
+    backgroundColor: COLORS.glass.bright,
     borderWidth: 1,
-    borderColor: COLORS.border.primary,
+    borderColor: 'rgba(255,255,255,0.95)',
     borderRadius: 24,
-    boxShadow: '0px 16px 24px rgba(148, 163, 184, 0.08)',
+    boxShadow: '0px 20px 40px rgba(148, 163, 184, 0.12)',
     elevation: 8,
   },
   // LEVEL 2 — STANDARD GLASS
   standard: {
-    backgroundColor: 'rgba(255,255,255,0.62)',
+    backgroundColor: COLORS.glass.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.70)',
+    borderColor: 'rgba(255,255,255,0.85)',
     borderRadius: 20,
-    boxShadow: '0px 8px 16px rgba(148, 163, 184, 0.05)',
+    boxShadow: '0px 10px 24px rgba(148, 163, 184, 0.08)',
     elevation: 4,
   },
   // LEVEL 3 — SECONDARY GLASS
   secondary: {
-    backgroundColor: 'rgba(255,255,255,0.50)',
+    backgroundColor: COLORS.glass.soft,
     borderWidth: 1,
     borderColor: COLORS.border.secondary,
     borderRadius: 12,
@@ -86,11 +86,11 @@ export const GLASS = StyleSheet.create({
 
 export const SHADOWS = StyleSheet.create({
   soft: {
-    boxShadow: '0px 8px 16px rgba(148, 163, 184, 0.06)',
+    boxShadow: '0px 8px 24px rgba(148, 163, 184, 0.08)',
     elevation: 4,
   },
   medium: {
-    boxShadow: '0px 12px 24px rgba(100, 116, 139, 0.08)',
+    boxShadow: '0px 16px 32px rgba(100, 116, 139, 0.12)',
     elevation: 6,
   }
 });
