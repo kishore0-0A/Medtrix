@@ -12,6 +12,8 @@ import { InventoryItem } from '../../supabase/database';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   // Safe-call because it warns in the New Architecture
@@ -400,6 +402,46 @@ export default function ScanScreen() {
     }
 
     setScanState('success');
+  };
+
+  const exportBillPDF = async () => {
+    try {
+      const price = parseInt(quantity || '0', 10) * 150;
+      const html = `
+        <html>
+          <body style="font-family: Helvetica, sans-serif; padding: 20px;">
+            <h1 style="color: #2563EB; text-align: center;">Medtrix Pharmacy - Demo Bill</h1>
+            <p style="text-align: center; color: #666;">Date: ${new Date().toLocaleDateString()}</p>
+            <p style="text-align: center; color: #666;">Order ID: ${orderId}</p>
+            <hr />
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #f8f9fa;">
+                  <th style="padding: 10px; text-align: left;">Item</th>
+                  <th style="padding: 10px; text-align: center;">Qty</th>
+                  <th style="padding: 10px; text-align: right;">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 10px;">${medicineName} ${strength} (Batch: ${selectedBatch?.batchNumber})</td>
+                  <td style="padding: 10px; text-align: center;">${quantity}</td>
+                  <td style="padding: 10px; text-align: right;">₹${price}</td>
+                </tr>
+              </tbody>
+            </table>
+            <h2 style="text-align: right; margin-top: 20px;">Total Paid: ₹${price}</h2>
+            <p style="text-align: center; margin-top: 40px; color: #888;">Thank you for shopping! (Demo Receipt)</p>
+          </body>
+        </html>
+      `;
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   const renderInput = (label: string, value: string, setter: (val: string) => void, keyboardType: any = 'default', required = false) => (
@@ -822,6 +864,11 @@ export default function ScanScreen() {
           </View>
 
           <View style={styles.bottomActionsSuccess}>
+            {scanMode === 'stock_out' && (
+              <Pressable style={[styles.primaryButton, {backgroundColor: COLORS.status.info, marginBottom: 16}]} onPress={exportBillPDF}>
+                <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+              </Pressable>
+            )}
             <Pressable style={styles.primaryButton} onPress={() => router.navigate('/inventory')}>
               <Text style={styles.primaryButtonText}>View Inventory</Text>
             </Pressable>

@@ -12,6 +12,8 @@ import { COLORS, TYPOGRAPHY, GLASS } from '../theme';
 import { Database, InventoryItem } from '../supabase/database';
 
 import { useTranslation } from 'react-i18next';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 type CartItem = {
   batch: InventoryItem;
@@ -236,6 +238,48 @@ export default function CheckoutScreen() {
     }
     
     setCheckoutState('success');
+  };
+
+  const exportBillPDF = async () => {
+    try {
+      let itemsHtml = cart.map(item => `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">${item.batch.name} (Batch: ${item.batch.batchNumber})</td>
+          <td style="padding: 10px; text-align: center;">${item.quantity}</td>
+          <td style="padding: 10px; text-align: right;">₹${item.quantity * 150}</td>
+        </tr>
+      `).join('');
+
+      const html = `
+        <html>
+          <body style="font-family: Helvetica, sans-serif; padding: 20px;">
+            <h1 style="color: #2563EB; text-align: center;">Medtrix Pharmacy - Demo Bill</h1>
+            <p style="text-align: center; color: #666;">Date: ${new Date().toLocaleDateString()}</p>
+            <hr />
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #f8f9fa;">
+                  <th style="padding: 10px; text-align: left;">Item</th>
+                  <th style="padding: 10px; text-align: center;">Qty</th>
+                  <th style="padding: 10px; text-align: right;">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+            <h2 style="text-align: right; margin-top: 20px;">Total Paid: ₹${calculateTotal()}</h2>
+            <p style="text-align: center; margin-top: 40px; color: #888;">Thank you for shopping! (Demo Receipt)</p>
+          </body>
+        </html>
+      `;
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   return (
@@ -563,8 +607,11 @@ export default function CheckoutScreen() {
           </View>
 
           <View style={styles.bottomActionsAbsolute}>
-            <Pressable style={styles.primaryButtonFlex} onPress={() => router.push('/inventory')}>
-              <Text style={styles.primaryButtonText}>View Updated Inventory</Text>
+            <Pressable style={[styles.primaryButtonFlex, {backgroundColor: COLORS.status.info}]} onPress={exportBillPDF}>
+              <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+            </Pressable>
+            <Pressable style={[styles.secondaryButtonFlex, {marginTop: 12}]} onPress={() => router.push('/inventory')}>
+              <Text style={styles.secondaryButtonText}>View Updated Inventory</Text>
             </Pressable>
             <Pressable style={[styles.secondaryButtonFlex, {marginTop: 12}]} onPress={() => {
               setCart([]);

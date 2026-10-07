@@ -157,7 +157,8 @@ export default function FloatingAssistant() {
         setIsListening(true);
         setTimeout(() => {
           setIsListening(false);
-          handleSend(t('assistant.suggestion_1'));
+          // If user typed something before clicking mic, send that. Otherwise use a demo question.
+          handleSend(input.trim() ? input.trim() : "Where am I?");
         }, 2500);
       }
     } catch (e) {
