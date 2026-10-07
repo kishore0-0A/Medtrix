@@ -97,6 +97,20 @@ export default function ProfileScreen() {
           </Pressable>
 
           <Pressable 
+            style={[styles.glassGroup, GLASS.standard, { padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }]}
+            onPress={() => router.push('/clinical-triage' as any)}
+          >
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.status.criticalBg, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <Ionicons name="medical-outline" size={24} color={COLORS.status.critical} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...TYPOGRAPHY.heading, fontSize: 16, color: COLORS.text.primary, marginBottom: 4 }}>Patient Clinical Triage</Text>
+              <Text style={{ ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.text.secondary }}>Evaluate patient symptoms and vitals.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.text.muted} />
+          </Pressable>
+
+          <Pressable 
             style={[styles.glassGroup, GLASS.standard, { padding: 16, flexDirection: 'row', alignItems: 'center' }]}
             onPress={() => router.push('/profile/ai-triage' as any)}
           >
