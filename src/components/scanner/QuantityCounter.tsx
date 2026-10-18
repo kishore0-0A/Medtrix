@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, TYPOGRAPHY, GLASS, SHADOWS } from '../../theme';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 import { QuantityInfo } from '../../services/cv/models';
 
 interface QuantityCounterProps {

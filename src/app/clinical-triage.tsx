@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Animated, { FadeIn, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
-import { COLORS, TYPOGRAPHY, GLASS, SHADOWS } from '../theme';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../theme';
+import { generateClinicalTriageReport } from '../services/reportService';
 
 // Stepper states
 type Step = 'Patient' | 'Symptoms' | 'Vitals' | 'Assessment' | 'Report';
@@ -14,14 +15,14 @@ const STEPS: Step[] = ['Patient', 'Symptoms', 'Vitals', 'Assessment', 'Report'];
 export default function ClinicalTriageScreen() {
   const { t, i18n } = useTranslation();
   const [currentStep, setCurrentStep] = useState<Step>('Patient');
-  const [loading, setLoading] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   // Form Data
   const [patientInfo, setPatientInfo] = useState({ age: '', sex: '', allergies: '' });
   const [symptoms, setSymptoms] = useState({ main: '', duration: '', severity: 5, location: '' });
   const [redFlags, setRedFlags] = useState<string[]>([]);
   
-  // Fake Assessment Data generated on step 4
+  // Assessment Data generated on step 4
   const [assessment, setAssessment] = useState<any>(null);
 
   const nextStep = () => {
@@ -41,7 +42,6 @@ export default function ClinicalTriageScreen() {
   };
 
   const simulateAIAssessment = () => {
-    setLoading(true);
     setCurrentStep('Assessment');
     setTimeout(() => {
       let riskLevel = 'Moderate';
@@ -54,7 +54,6 @@ export default function ClinicalTriageScreen() {
         recommendation: riskLevel === 'High' ? 'Immediate clinical evaluation recommended.' : 'Monitor symptoms and schedule standard follow-up.',
         category: 'General Medicine'
       });
-      setLoading(false);
       setCurrentStep('Report');
     }, 2500);
   };
@@ -65,6 +64,41 @@ export default function ClinicalTriageScreen() {
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!assessment) return;
+    setIsGeneratingPdf(true);
+    try {
+      const res = await generateClinicalTriageReport(
+        {
+          patient: patientInfo,
+          symptoms,
+          redFlags,
+          assessment,
+        },
+        i18n.language
+      );
+      if (res.success) {
+        Alert.alert(
+          t('ai_triage.report_generated_success') || 'Report Generated',
+          'Clinical AI Triage assessment PDF has been created and is ready to share or save.'
+        );
+      } else {
+        Alert.alert(
+          t('ai_triage.report_generation_failed') || 'Report Generation Failed',
+          res.error || 'Failed to generate clinical triage PDF. Please try again.'
+        );
+      }
+    } catch (err: any) {
+      console.warn('Clinical triage PDF export failed:', err);
+      Alert.alert(
+        t('ai_triage.report_generation_failed') || 'Report Generation Failed',
+        err?.message || 'Failed to generate clinical triage PDF. Please try again.'
+      );
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -218,9 +252,21 @@ export default function ClinicalTriageScreen() {
                 <Text style={styles.reportTitle}>AI Triage Assessment</Text>
                 <Text style={styles.subText}>Generated: {new Date().toLocaleString()}</Text>
               </View>
-              <Pressable style={styles.downloadBtn}>
-                <Ionicons name="document-text" size={18} color="#fff" />
-                <Text style={styles.downloadText}>Download PDF</Text>
+              <Pressable
+                style={styles.downloadBtn}
+                onPress={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                accessibilityRole="button"
+                accessibilityLabel="Download Clinical Triage PDF"
+              >
+                {isGeneratingPdf ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="document-text" size={18} color="#fff" />
+                    <Text style={styles.downloadText}>Download PDF</Text>
+                  </>
+                )}
               </Pressable>
             </View>
 

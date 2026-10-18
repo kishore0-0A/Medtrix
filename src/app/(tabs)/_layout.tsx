@@ -3,15 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from '
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
-
 import { useTranslation } from 'react-i18next';
+
+import { COLORS, TYPOGRAPHY } from '../../theme';
+import { useThemeContext } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeContext();
 
   return (
     <View
@@ -22,7 +23,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         },
       ]}
     >
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, isDark && { backgroundColor: 'rgba(30, 41, 59, 0.94)', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
           const label =
@@ -83,18 +84,18 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 isScan && styles.scanButtonContainer,
                 isFocused && !isScan && styles.activeTab,
               ]}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <View style={isScan ? styles.scanIconWrapper : null}>
+              <View style={isScan ? [styles.scanIconWrapper, isDark && { borderColor: '#1E293B' }] : null}>
                 <Ionicons
                   name={iconName}
-                  size={isScan ? 24 : 22}
+                  size={isScan ? 24 : 20}
                   color={
                     isScan
-                      ? COLORS.brand.primary
+                      ? '#FFFFFF'
                       : isFocused
                       ? COLORS.brand.primary
-                      : COLORS.text.muted
+                      : isDark ? '#94A3B8' : COLORS.text.muted
                   }
                 />
               </View>
@@ -104,7 +105,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                     styles.tabLabel,
                     isFocused ? TYPOGRAPHY.bodyBold : TYPOGRAPHY.bodyMedium,
                     {
-                      color: isFocused ? COLORS.brand.primary : COLORS.text.muted,
+                      color: isFocused ? COLORS.brand.primary : (isDark ? '#94A3B8' : COLORS.text.muted),
                     },
                   ]}
                 >
@@ -172,16 +173,16 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    width: width * 0.92,
-    height: 72,
-    backgroundColor: COLORS.glass.bright,
+    width: Math.min(width * 0.94, 440),
+    height: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
-    shadowColor: '#94A3B8',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    shadowColor: '#334155',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOpacity: 0.10,
+    shadowRadius: 20,
     elevation: 8,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -192,35 +193,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    borderRadius: 20,
-    paddingVertical: 8,
+    borderRadius: 18,
+    paddingVertical: 6,
   },
   activeTab: {
     backgroundColor: COLORS.brand.verySoft,
+    borderWidth: 1,
+    borderColor: COLORS.brand.soft,
     marginVertical: 6,
     height: 'auto',
   },
   scanButtonContainer: {
     flex: 1.2,
-    transform: [{ translateY: -12 }],
+    transform: [{ translateY: -14 }],
   },
   scanIconWrapper: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: COLORS.background.canvas,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: COLORS.glass.primary,
+    shadowColor: COLORS.brand.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   tabLabel: {
-    fontSize: 10,
-    marginTop: 4,
+    fontSize: 10.5,
+    marginTop: 3,
   },
 });

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
+import { COLORS, TYPOGRAPHY } from '../../theme';
 import { Database } from '../../supabase/database';
 // expo-notifications is removed because it causes a hard crash in Expo Go SDK 53+
 // import * as Notifications from 'expo-notifications';

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 
 import {
   Animated,
-  Dimensions,
+
   Easing,
   Pressable,
   ScrollView,
@@ -20,8 +20,10 @@ import {
   Ionicons,
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
+import { useThemeContext } from '../../context/ThemeContext';
+import ThemeToggle from '../../components/ThemeToggle';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 
 /* ============================================================
    COLORS
@@ -110,6 +112,7 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const { isDark } = useThemeContext();
   /* ----------------------------------------------------------
      Entrance animations
   ---------------------------------------------------------- */
@@ -271,12 +274,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
-      style={styles.safeArea}
+      style={[styles.safeArea, isDark && { backgroundColor: '#000000' }]}
       edges={['top']}
     >
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor={COLORS.background}
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? '#000000' : COLORS.background}
       />
 
       {/* =====================================================
@@ -284,11 +287,11 @@ export default function HomeScreen() {
       ===================================================== */}
 
       <View
-        style={[styles.backgroundGlowBlue, { pointerEvents: 'none' }]}
+        style={[styles.backgroundGlowBlue, isDark && { backgroundColor: '#1D4ED8', opacity: 0.15 }, { pointerEvents: 'none' }]}
       />
 
       <View
-        style={[styles.backgroundGlowGreen, { pointerEvents: 'none' }]}
+        style={[styles.backgroundGlowGreen, isDark && { opacity: 0 }, { pointerEvents: 'none' }]}
       />
 
       <ScrollView
@@ -322,11 +325,11 @@ export default function HomeScreen() {
             </View>
 
             <View>
-              <Text style={styles.brandName}>
+              <Text style={[styles.brandName, isDark && { color: '#FFFFFF' }]}>
                 MEDTRIX
               </Text>
 
-              <Text style={styles.brandSub}>
+              <Text style={[styles.brandSub, isDark && { color: '#CBD5E1' }]}>
                 CLINICAL OPERATIONS
               </Text>
             </View>
@@ -335,8 +338,15 @@ export default function HomeScreen() {
           {/* Header Actions */}
 
           <View style={styles.headerActions}>
+            <ThemeToggle style={{ marginRight: 8 }} />
             <Pressable
-              style={styles.headerButton}
+              style={[
+                styles.headerButton,
+                isDark && {
+                  backgroundColor: '#0D1117',
+                  borderColor: '#1E293B',
+                },
+              ]}
               onPress={() =>
                 handleNavigation('/notifications')
               }
@@ -344,7 +354,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="notifications-outline"
                 size={19}
-                color={COLORS.text}
+                color={isDark ? '#FFFFFF' : COLORS.text}
               />
 
               <View style={styles.notificationDot} />
@@ -367,11 +377,11 @@ export default function HomeScreen() {
               WELCOME BACK
             </Text>
 
-            <Text style={styles.greetingName}>
+            <Text style={[styles.greetingName, isDark && { color: '#FFFFFF' }]}>
               Kishore
             </Text>
 
-            <Text style={styles.greetingDescription}>
+            <Text style={[styles.greetingDescription, isDark && { color: '#CBD5E1' }]}>
               Manage your medicine inventory.
             </Text>
           </View>
@@ -555,6 +565,10 @@ export default function HomeScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.inventoryCard,
+              isDark && {
+                backgroundColor: '#0D1117',
+                borderColor: '#1E293B',
+              },
               pressed && styles.buttonPressed,
             ]}
             onPress={() =>
@@ -577,11 +591,11 @@ export default function HomeScreen() {
                   TOTAL MEDICINES
                 </Text>
 
-                <Text style={styles.inventoryValue}>
+                <Text style={[styles.inventoryValue, isDark && { color: '#60A5FA' }]}>
                   {inventorySummary.totalMedicines}
                 </Text>
 
-                <Text style={styles.inventorySubtitle}>
+                <Text style={[styles.inventorySubtitle, isDark && { color: '#94A3B8' }]}>
                   Medicines currently in inventory
                 </Text>
               </View>
@@ -595,7 +609,7 @@ export default function HomeScreen() {
 
             {/* Divider */}
 
-            <View style={styles.inventoryDivider} />
+            <View style={[styles.inventoryDivider, isDark && { backgroundColor: '#1E293B' }]} />
 
             {/* Compact metrics */}
 
@@ -647,7 +661,7 @@ export default function HomeScreen() {
             }
           />
 
-          <View style={styles.attentionCard}>
+          <View style={[styles.attentionCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
             {attentionItems.map((item, index) => (
               <Pressable
                 key={item.name}
@@ -666,23 +680,23 @@ export default function HomeScreen() {
                   style={[
                     styles.attentionIcon,
                     {
-                      backgroundColor: item.background,
+                      backgroundColor: isDark ? 'rgba(37, 99, 235, 0.16)' : item.background,
                     },
                   ]}
                 >
                   <Ionicons
                     name={item.icon}
                     size={18}
-                    color={item.color}
+                    color={isDark ? '#60A5FA' : item.color}
                   />
                 </View>
 
                 <View style={styles.attentionContent}>
-                  <Text style={styles.attentionTitle}>
+                  <Text style={[styles.attentionTitle, isDark && { color: '#FFFFFF' }]}>
                     {item.name}
                   </Text>
 
-                  <Text style={styles.attentionDescription}>
+                  <Text style={[styles.attentionDescription, isDark && { color: '#CBD5E1' }]}>
                     {item.description}
                   </Text>
                 </View>
@@ -692,7 +706,7 @@ export default function HomeScreen() {
                     style={[
                       styles.attentionValue,
                       {
-                        color: item.color,
+                        color: isDark ? '#60A5FA' : item.color,
                       },
                     ]}
                   >
@@ -702,7 +716,7 @@ export default function HomeScreen() {
                   <Ionicons
                     name="chevron-forward"
                     size={16}
-                    color={COLORS.textLight}
+                    color={isDark ? '#CBD5E1' : COLORS.textLight}
                   />
                 </View>
               </Pressable>
@@ -733,15 +747,16 @@ function SectionHeader({
   action?: string;
   onAction?: () => void;
 }) {
+  const { isDark } = useThemeContext();
   return (
     <View style={styles.sectionHeader}>
       <View>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>
           {title}
         </Text>
 
         {subtitle && (
-          <Text style={styles.sectionSubtitle}>
+          <Text style={[styles.sectionSubtitle, isDark && { color: '#CBD5E1' }]}>
             {subtitle}
           </Text>
         )}
@@ -752,14 +767,14 @@ function SectionHeader({
           style={styles.sectionAction}
           onPress={onAction}
         >
-          <Text style={styles.sectionActionText}>
+          <Text style={[styles.sectionActionText, isDark && { color: '#60A5FA' }]}>
             {action}
           </Text>
 
           <Ionicons
             name="chevron-forward"
             size={13}
-            color={COLORS.primary}
+            color={isDark ? '#60A5FA' : COLORS.primary}
           />
         </Pressable>
       )}
@@ -808,13 +823,14 @@ function MiniMetric({
   color: string;
   background: string;
 }) {
+  const { isDark } = useThemeContext();
   return (
     <View style={styles.miniMetric}>
       <View
         style={[
           styles.miniMetricIcon,
           {
-            backgroundColor: background,
+            backgroundColor: isDark ? 'rgba(37, 99, 235, 0.16)' : background,
           },
         ]}
       >
@@ -822,7 +838,7 @@ function MiniMetric({
           style={[
             styles.miniMetricDot,
             {
-              backgroundColor: color,
+              backgroundColor: isDark ? '#3B82F6' : color,
             },
           ]}
         />
@@ -832,14 +848,14 @@ function MiniMetric({
         style={[
           styles.miniMetricValue,
           {
-            color,
+            color: isDark ? '#60A5FA' : color,
           },
         ]}
       >
         {value}
       </Text>
 
-      <Text style={styles.miniMetricLabel}>
+      <Text style={[styles.miniMetricLabel, isDark && { color: '#CBD5E1' }]}>
         {label}
       </Text>
     </View>

@@ -8,10 +8,22 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { LogBox } from 'react-native';
+import {
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+  Outfit_800ExtraBold,
+} from '@expo-google-fonts/outfit';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
+import { LogBox, View, StyleSheet } from 'react-native';
 import { Auth } from '../supabase';
 import { initI18n } from '../i18n';
 import FloatingAssistant from '../components/FloatingAssistant';
+import { ThemeProvider } from '../context/ThemeContext';
 SplashScreen.preventAutoHideAsync();
 
 LogBox.ignoreLogs([
@@ -25,6 +37,19 @@ export default function RootLayout() {
     'Jakarta-Medium': PlusJakartaSans_500Medium,
     'Jakarta-SemiBold': PlusJakartaSans_600SemiBold,
     'Jakarta-Bold': PlusJakartaSans_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    'Outfit-Regular': Outfit_400Regular,
+    'Outfit-Medium': Outfit_500Medium,
+    'Outfit-SemiBold': Outfit_600SemiBold,
+    'Outfit-Bold': Outfit_700Bold,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_700Bold,
   });
 
   const [authChecked, setAuthChecked] = useState(false);
@@ -35,8 +60,12 @@ export default function RootLayout() {
       
       try {
         await initI18n();
+        const user = await Auth.getCurrentUser();
+        if (!user) {
+          router.replace('/auth/login');
+        }
       } catch (err) {
-        console.warn('Auth check error:', err);
+        console.error('Error during initial check:', err);
       } finally {
         setAuthChecked(true);
         SplashScreen.hideAsync();
@@ -57,13 +86,22 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-      <FloatingAssistant />
-    </>
+    <ThemeProvider>
+      <View style={styles.root}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <FloatingAssistant />
+      </View>
+    </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    position: 'relative',
+  },
+});

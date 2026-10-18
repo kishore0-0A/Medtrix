@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View, Text, Pressable, TextInput, ScrollView, Image, LayoutAnimation, Platform, UIManager, Animated, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
+import { useThemeContext } from '../../context/ThemeContext';
 
 import { ScannerService } from '../../services/cv/ScannerService';
 import { FrontendResultModel } from '../../services/cv/models';
@@ -12,18 +13,25 @@ import { InventoryItem } from '../../supabase/database';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import { executePrintAndShare } from '../../services/reportService';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  // Safe-call because it warns in the New Architecture
-  const _ = UIManager.setLayoutAnimationEnabledExperimental;
+if (
+  Platform.OS === 'android' &&
+  typeof UIManager.setLayoutAnimationEnabledExperimental === 'function' &&
+  !(globalThis as any).nativeFabricUIManager
+) {
+  try {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  } catch {
+    // Ignored in New Architecture
+  }
 }
 
 type ScanState = 'mode_selection' | 'camera' | 'preview' | 'processing' | 'ocr_review' | 'batch_selection' | 'quantity_input' | 'final_review' | 'payment_selection' | 'payment_processing' | 'saving' | 'success';
 type ScanMode = 'stock_in' | 'stock_out';
 
 export default function ScanScreen() {
+  const { isDark } = useThemeContext();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanStateRaw, _setScanState] = useState<ScanState>('mode_selection');
   
@@ -36,15 +44,11 @@ export default function ScanScreen() {
   const [result, setResult] = useState<FrontendResultModel | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  
-  type PaymentMethod = 'gpay' | 'phonepe' | 'paytm' | 'card' | 'cash' | 'demo';
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
 
   const cameraRef = useRef<CameraView>(null);
 
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<string>('');
-  const [amountReceived, setAmountReceived] = useState<string>('');
   const [orderId, setOrderId] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const beamAnim = useRef(new Animated.Value(0)).current;
@@ -60,7 +64,7 @@ export default function ScanScreen() {
     } else {
       beamAnim.setValue(0);
     }
-  }, [scanState]);
+  }, [scanState, beamAnim]);
 
   // Editable fields - Medicine
   const [medicineName, setMedicineName] = useState('');
@@ -110,7 +114,7 @@ export default function ScanScreen() {
   // Auto-requesting permissions in useEffect can sometimes cause React state update warnings
   // during Expo Router's initial mount/linking phase. We rely on the button instead.
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     switch (scanState) {
       case 'camera':
         setScanState('mode_selection');
@@ -147,7 +151,7 @@ export default function ScanScreen() {
       default:
         break;
     }
-  };
+  }, [scanState, scanMode]);
 
   // Handle Android system back button
   useFocusEffect(
@@ -166,19 +170,19 @@ export default function ScanScreen() {
 
       const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => backHandler.remove();
-    }, [scanStateRaw, scanMode, result]) // Ensure the closure has the latest state
+    }, [scanStateRaw, handleBack])
   );
 
   const renderHeader = (title: string, subtitle: string, subtitleStyle: any = styles.headerSubtitle, showBack = true) => (
-    <View style={styles.header}>
+    <View style={[styles.header, isDark && { backgroundColor: '#0D1117', borderBottomColor: '#1E293B' }]}>
       {showBack && (
         <Pressable style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={28} color={COLORS.text.primary} />
+          <Ionicons name="arrow-back" size={28} color={isDark ? '#FFFFFF' : COLORS.text.primary} />
         </Pressable>
       )}
       <View style={styles.headerTextContainer}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        {subtitle ? <Text style={subtitleStyle}>{subtitle}</Text> : null}
+        <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>{title}</Text>
+        {subtitle ? <Text style={[subtitleStyle, isDark && { color: '#CBD5E1' }]}>{subtitle}</Text> : null}
       </View>
       {showBack && (
         <Pressable style={styles.cancelButton} onPress={() => {
@@ -191,7 +195,7 @@ export default function ScanScreen() {
              }}
            ]);
         }}>
-          <Ionicons name="close" size={28} color={COLORS.text.secondary} />
+          <Ionicons name="close" size={28} color={isDark ? '#CBD5E1' : COLORS.text.secondary} />
         </Pressable>
       )}
     </View>
@@ -435,31 +439,28 @@ export default function ScanScreen() {
           </body>
         </html>
       `;
-      const { uri } = await Print.printToFileAsync({ html });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
-      }
+      await executePrintAndShare(html, `Medtrix_Receipt_${Date.now()}.pdf`, 'Share Receipt');
     } catch (e) {
-      console.warn(e);
+      console.warn('Receipt sharing error:', e);
     }
   };
 
   const renderInput = (label: string, value: string, setter: (val: string) => void, keyboardType: any = 'default', required = false) => (
     <View style={styles.inputGroup} key={label}>
-      <Text style={styles.label}>{label} {required && '*'}</Text>
+      <Text style={[styles.label, isDark && { color: '#CBD5E1' }]}>{label} {required && '*'}</Text>
       <TextInput 
-        style={styles.input} 
+        style={[styles.input, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B', color: '#FFFFFF' }]} 
         value={value} 
         onChangeText={setter} 
         keyboardType={keyboardType} 
         placeholder={value ? '' : 'Not detected'} 
-        placeholderTextColor={COLORS.text.disabled}
+        placeholderTextColor={isDark ? '#64748B' : COLORS.text.disabled}
       />
     </View>
   );
 
   const renderSectionHeader = (title: string) => (
-    <Text style={styles.sectionHeader}>{title}</Text>
+    <Text style={[styles.sectionHeader, isDark && { color: '#60A5FA', borderBottomColor: '#1E293B' }]}>{title}</Text>
   );
 
   if (!permission) return <View style={styles.container} />;
@@ -477,34 +478,43 @@ export default function ScanScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#000000' }]} edges={['top']}>
       {scanState === 'mode_selection' && (
         <View style={styles.centerContainer}>
-          <Text style={styles.headerTitle}>Select Action</Text>
-          <Text style={styles.headerSubtitle}>What would you like to do with the scanner?</Text>
+          <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>Select Action</Text>
+          <Text style={[styles.headerSubtitle, isDark && { color: '#CBD5E1' }]}>What would you like to do with the scanner?</Text>
           
           <View style={{ marginTop: 40, width: '100%', paddingHorizontal: 20, gap: 16 }}>
-            <Pressable style={[styles.modeCard, GLASS.standard]} onPress={() => { setScanMode('stock_in'); setScanState('camera'); }}>
-              <Ionicons name="arrow-down-circle-outline" size={40} color={COLORS.status.healthy} />
+            <Pressable 
+              style={[styles.modeCard, GLASS.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} 
+              onPress={() => { setScanMode('stock_in'); setScanState('camera'); }}
+            >
+              <Ionicons name="arrow-down-circle-outline" size={40} color={isDark ? '#3B82F6' : COLORS.status.healthy} />
               <View style={styles.modeCardContent}>
-                <Text style={styles.modeCardTitle}>Stock In</Text>
-                <Text style={styles.modeCardSub}>Add or increase medicine inventory</Text>
+                <Text style={[styles.modeCardTitle, isDark && { color: '#FFFFFF' }]}>Stock In</Text>
+                <Text style={[styles.modeCardSub, isDark && { color: '#CBD5E1' }]}>Add or increase medicine inventory</Text>
               </View>
             </Pressable>
 
-            <Pressable style={[styles.modeCard, GLASS.standard]} onPress={() => { setScanMode('stock_out'); setScanState('camera'); }}>
-              <Ionicons name="arrow-up-circle-outline" size={40} color={COLORS.status.info} />
+            <Pressable 
+              style={[styles.modeCard, GLASS.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} 
+              onPress={() => { setScanMode('stock_out'); setScanState('camera'); }}
+            >
+              <Ionicons name="arrow-up-circle-outline" size={40} color={isDark ? '#60A5FA' : COLORS.status.info} />
               <View style={styles.modeCardContent}>
-                <Text style={styles.modeCardTitle}>Stock Out</Text>
-                <Text style={styles.modeCardSub}>Issue medicine and reduce inventory</Text>
+                <Text style={[styles.modeCardTitle, isDark && { color: '#FFFFFF' }]}>Stock Out</Text>
+                <Text style={[styles.modeCardSub, isDark && { color: '#CBD5E1' }]}>Issue medicine and reduce inventory</Text>
               </View>
             </Pressable>
 
-            <Pressable style={[styles.modeCard, GLASS.standard, { marginTop: 16 }]} onPress={() => router.push('/checkout')}>
-              <Ionicons name="cart-outline" size={40} color={COLORS.brand.primary} />
+            <Pressable 
+              style={[styles.modeCard, GLASS.standard, { marginTop: 16 }, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} 
+              onPress={() => router.push('/checkout')}
+            >
+              <Ionicons name="cart-outline" size={40} color={isDark ? '#3B82F6' : COLORS.brand.primary} />
               <View style={styles.modeCardContent}>
-                <Text style={styles.modeCardTitle}>Sales & Checkout</Text>
-                <Text style={styles.modeCardSub}>Add medicines to cart, confirm demo payment, and automatically update stock.</Text>
+                <Text style={[styles.modeCardTitle, isDark && { color: '#FFFFFF' }]}>Sales & Checkout</Text>
+                <Text style={[styles.modeCardSub, isDark && { color: '#CBD5E1' }]}>Add medicines to cart, confirm demo payment, and automatically update stock.</Text>
               </View>
             </Pressable>
           </View>
@@ -528,8 +538,8 @@ export default function ScanScreen() {
                <View style={[
                  styles.scanFrame, 
                  { 
-                   borderColor: scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info,
-                   shadowColor: scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info,
+                   borderColor: isDark ? '#3B82F6' : (scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info),
+                   shadowColor: isDark ? '#2563EB' : (scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info),
                    shadowOpacity: 0.8,
                    shadowRadius: 15,
                    elevation: 10
@@ -542,7 +552,7 @@ export default function ScanScreen() {
                         outputRange: [-90, 90]
                       })
                     }],
-                    backgroundColor: scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info
+                    backgroundColor: isDark ? '#3B82F6' : (scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info)
                  }]} />
                  <Text style={styles.scanFrameText}>Align medicine label inside frame</Text>
                </View>
@@ -552,15 +562,15 @@ export default function ScanScreen() {
             <Pressable style={styles.primaryButton} onPress={handleTakePhoto}>
               <Text style={styles.primaryButtonText}>Capture</Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, {marginTop: 12}]} onPress={() => {}}>
-              <Text style={styles.secondaryButtonText}>Choose from Gallery</Text>
+            <Pressable style={[styles.secondaryButton, {marginTop: 12}, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} onPress={() => {}}>
+              <Text style={[styles.secondaryButtonText, isDark && { color: '#CBD5E1' }]}>Choose from Gallery</Text>
             </Pressable>
             <Pressable 
-              style={[styles.secondaryButton, styles.backSelectionButton, GLASS.standard]} 
+              style={[styles.secondaryButton, styles.backSelectionButton, GLASS.standard, isDark && { backgroundColor: '#111827', borderColor: '#1E293B' }]} 
               onPress={() => setScanState('mode_selection')}
             >
-              <Ionicons name="arrow-back" size={20} color={COLORS.brand.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.backSelectionButtonText}>Back to Stock Selection</Text>
+              <Ionicons name="arrow-back" size={20} color={isDark ? '#60A5FA' : COLORS.brand.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.backSelectionButtonText, isDark && { color: '#60A5FA' }]}>Back to Stock Selection</Text>
             </Pressable>
           </View>
         </View>
@@ -657,21 +667,26 @@ export default function ScanScreen() {
             {availableBatches.map(batch => (
                <Pressable 
                  key={batch.id} 
-                 style={[styles.batchCard, selectedBatch?.id === batch.id && styles.batchCardSelected, GLASS.standard]}
+                 style={[
+                   styles.batchCard, 
+                   GLASS.standard,
+                   isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' },
+                   selectedBatch?.id === batch.id && (isDark ? { borderColor: '#3B82F6', backgroundColor: '#111827' } : styles.batchCardSelected)
+                 ]}
                  onPress={() => setSelectedBatch(batch)}
                >
                  <View style={styles.batchCardRow}>
-                   <Text style={styles.batchCardTitle}>Batch: {batch.batchNumber}</Text>
-                   {selectedBatch?.id === batch.id && <Ionicons name="checkmark-circle" size={24} color={COLORS.brand.primary} />}
+                   <Text style={[styles.batchCardTitle, isDark && { color: '#FFFFFF' }]}>Batch: {batch.batchNumber}</Text>
+                   {selectedBatch?.id === batch.id && <Ionicons name="checkmark-circle" size={24} color={isDark ? '#3B82F6' : COLORS.brand.primary} />}
                  </View>
-                 <Text style={styles.batchCardSub}>Expiry: {batch.expiryDate}</Text>
-                 <Text style={[styles.batchCardSub, { color: COLORS.brand.primary, ...TYPOGRAPHY.bodyBold }]}>Available Stock: {batch.quantity}</Text>
+                 <Text style={[styles.batchCardSub, isDark && { color: '#CBD5E1' }]}>Expiry: {batch.expiryDate}</Text>
+                 <Text style={[styles.batchCardSub, { color: isDark ? '#60A5FA' : COLORS.brand.primary, ...TYPOGRAPHY.bodyBold }]}>Available Stock: {batch.quantity}</Text>
                </Pressable>
             ))}
           </ScrollView>
-          <View style={styles.bottomActionsAbsoluteRow}>
-            <Pressable style={styles.secondaryButtonFlex} onPress={() => setScanState('ocr_review')}>
-              <Text style={styles.secondaryButtonText}>Back</Text>
+          <View style={[styles.bottomActionsAbsoluteRow, isDark && { backgroundColor: '#000000' }]}>
+            <Pressable style={[styles.secondaryButtonFlex, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} onPress={() => setScanState('ocr_review')}>
+              <Text style={[styles.secondaryButtonText, isDark && { color: '#CBD5E1' }]}>Back</Text>
             </Pressable>
             <Pressable style={styles.primaryButtonFlex} onPress={() => setScanState('quantity_input')}>
               <Text style={styles.primaryButtonText}>Continue</Text>
@@ -687,36 +702,37 @@ export default function ScanScreen() {
             scanMode === 'stock_in' ? 'How many units are being added to inventory?' : 'How many units are being issued?'
           )}
           <View style={styles.centerContainer}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>{medicineName}</Text>
+            <View style={[styles.summaryCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+              <Text style={[styles.summaryTitle, isDark && { color: '#FFFFFF' }]}>{medicineName}</Text>
               {scanMode === 'stock_in' ? (
                 <>
-                  <Text style={styles.summarySub}>{strength} {form}</Text>
-                  <Text style={styles.summarySub}>Batch {batchNumber}</Text>
-                  {packSize ? <Text style={styles.summarySub}>Pack Size: {packSize} {packUnit}</Text> : null}
+                  <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>{strength} {form}</Text>
+                  <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>Batch {batchNumber}</Text>
+                  {packSize ? <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>Pack Size: {packSize} {packUnit}</Text> : null}
                 </>
               ) : (
                 <>
-                  <Text style={styles.summarySub}>Batch: {selectedBatch?.batchNumber}</Text>
-                  <Text style={[styles.summarySub, { color: COLORS.brand.primary, marginTop: 8, ...TYPOGRAPHY.bodyBold }]}>Available Stock: {selectedBatch?.quantity} units</Text>
+                  <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>Batch: {selectedBatch?.batchNumber}</Text>
+                  <Text style={[styles.summarySub, { color: isDark ? '#60A5FA' : COLORS.brand.primary, marginTop: 8, ...TYPOGRAPHY.bodyBold }]}>Available Stock: {selectedBatch?.quantity} units</Text>
                 </>
               )}
             </View>
-            <Text style={styles.quantityLabel}>{scanMode === 'stock_in' ? 'Quantity Received' : 'Quantity Issued'}</Text>
+            <Text style={[styles.quantityLabel, isDark && { color: '#FFFFFF' }]}>{scanMode === 'stock_in' ? 'Quantity Received' : 'Quantity Issued'}</Text>
             <TextInput 
-              style={styles.quantityInput} 
+              style={[styles.quantityInput, isDark && { color: '#60A5FA', borderBottomColor: '#1E293B' }]} 
               value={quantity} 
               onChangeText={setQuantity} 
               keyboardType="number-pad" 
               autoFocus 
               textAlign="center"
               placeholder="0"
+              placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
             />
-            <Text style={styles.quantityUnit}>units</Text>
+            <Text style={[styles.quantityUnit, isDark && { color: '#CBD5E1' }]}>units</Text>
           </View>
           <View style={styles.bottomActionsRow}>
-            <Pressable style={styles.secondaryButtonFlex} onPress={() => setScanState(scanMode === 'stock_out' ? 'batch_selection' : 'ocr_review')}>
-              <Text style={styles.secondaryButtonText}>Back</Text>
+            <Pressable style={[styles.secondaryButtonFlex, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} onPress={() => setScanState(scanMode === 'stock_out' ? 'batch_selection' : 'ocr_review')}>
+              <Text style={[styles.secondaryButtonText, isDark && { color: '#CBD5E1' }]}>Back</Text>
             </Pressable>
             <Pressable style={styles.primaryButtonFlex} onPress={handleConfirmQuantity}>
               <Text style={styles.primaryButtonText}>Continue</Text>
@@ -733,21 +749,21 @@ export default function ScanScreen() {
             styles.headerSubtitleWarning
           )}
           <ScrollView contentContainerStyle={[styles.scrollContent, {paddingBottom: 150}]}>
-            <View style={styles.finalCard}>
-              <View style={styles.finalRow}>
-                <Text style={styles.finalLabel}>Action</Text>
-                <Text style={[styles.finalValueBold, { color: scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info }]}>
+            <View style={[styles.finalCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+              <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}>
+                <Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Action</Text>
+                <Text style={[styles.finalValueBold, { color: isDark ? (scanMode === 'stock_in' ? '#3B82F6' : '#60A5FA') : (scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info) }]}>
                   {scanMode === 'stock_in' ? 'Stock In' : 'Stock Out'}
                 </Text>
               </View>
-              <View style={styles.finalRow}><Text style={styles.finalLabel}>Medicine</Text><Text style={styles.finalValue}>{medicineName}</Text></View>
-              {scanMode === 'stock_in' && genericName ? <View style={styles.finalRow}><Text style={styles.finalLabel}>Generic</Text><Text style={styles.finalValue}>{genericName}</Text></View> : null}
-              {scanMode === 'stock_in' && form ? <View style={styles.finalRow}><Text style={styles.finalLabel}>Form</Text><Text style={styles.finalValue}>{form}</Text></View> : null}
-              <View style={styles.finalRow}><Text style={styles.finalLabel}>Batch</Text><Text style={styles.finalValueMono}>{scanMode === 'stock_in' ? batchNumber : selectedBatch?.batchNumber}</Text></View>
-              {scanMode === 'stock_in' && mfgDate ? <View style={styles.finalRow}><Text style={styles.finalLabel}>MFG</Text><Text style={styles.finalValue}>{mfgDate}</Text></View> : null}
-              <View style={styles.finalRow}><Text style={styles.finalLabel}>EXP</Text><Text style={styles.finalValue}>{scanMode === 'stock_in' ? expDate : selectedBatch?.expiryDate}</Text></View>
-              {scanMode === 'stock_out' && <View style={styles.finalRow}><Text style={styles.finalLabel}>Remaining</Text><Text style={styles.finalValueBold}>{((selectedBatch?.quantity || 0) - parseInt(quantity, 10))} units</Text></View>}
-              <View style={[styles.finalRow, {borderBottomWidth: 0}]}><Text style={styles.finalLabel}>{scanMode === 'stock_in' ? 'Added' : 'Issued'} Qty</Text><Text style={styles.finalValueBold}>{quantity} units</Text></View>
+              <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Medicine</Text><Text style={[styles.finalValue, isDark && { color: '#FFFFFF' }]}>{medicineName}</Text></View>
+              {scanMode === 'stock_in' && genericName ? <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Generic</Text><Text style={[styles.finalValue, isDark && { color: '#FFFFFF' }]}>{genericName}</Text></View> : null}
+              {scanMode === 'stock_in' && form ? <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Form</Text><Text style={[styles.finalValue, isDark && { color: '#FFFFFF' }]}>{form}</Text></View> : null}
+              <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Batch</Text><Text style={[styles.finalValueMono, isDark && { color: '#FFFFFF' }]}>{scanMode === 'stock_in' ? batchNumber : selectedBatch?.batchNumber}</Text></View>
+              {scanMode === 'stock_in' && mfgDate ? <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>MFG</Text><Text style={[styles.finalValue, isDark && { color: '#FFFFFF' }]}>{mfgDate}</Text></View> : null}
+              <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>EXP</Text><Text style={[styles.finalValue, isDark && { color: '#FFFFFF' }]}>{scanMode === 'stock_in' ? expDate : selectedBatch?.expiryDate}</Text></View>
+              {scanMode === 'stock_out' && <View style={[styles.finalRow, isDark && { borderBottomColor: '#1E293B' }]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>Remaining</Text><Text style={[styles.finalValueBold, isDark && { color: '#FFFFFF' }]}>{((selectedBatch?.quantity || 0) - parseInt(quantity, 10))} units</Text></View>}
+              <View style={[styles.finalRow, {borderBottomWidth: 0}]}><Text style={[styles.finalLabel, isDark && { color: '#CBD5E1' }]}>{scanMode === 'stock_in' ? 'Added' : 'Issued'} Qty</Text><Text style={[styles.finalValueBold, isDark && { color: '#FFFFFF' }]}>{quantity} units</Text></View>
             </View>
           </ScrollView>
           <View style={styles.bottomActionsAbsoluteRow}>
@@ -775,19 +791,19 @@ export default function ScanScreen() {
 
         return (
           <View style={styles.fullFlex}>
-            <View style={styles.header}>
+            <View style={[styles.header, isDark && { backgroundColor: '#0D1117', borderBottomColor: '#1E293B' }]}>
               <Pressable onPress={() => setScanState('final_review')} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+                <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : COLORS.text.primary} />
               </Pressable>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Make Payment</Text>
-                <Text style={styles.headerSubtitle}>Scan the QR to complete order {orderId}</Text>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>Make Payment</Text>
+                <Text style={[styles.headerSubtitle, isDark && { color: '#CBD5E1' }]}>Scan the QR to complete order {orderId}</Text>
               </View>
             </View>
             
             <ScrollView contentContainerStyle={styles.scrollContent}>
-              <View style={[styles.cartContainer, {alignItems: 'center', marginTop: 24, paddingVertical: 40}]}>
-                <Text style={[styles.sectionTitle, {marginBottom: 32}]}>Total: ₹{totalAmount}</Text>
+              <View style={[styles.cartContainer, {alignItems: 'center', marginTop: 24, paddingVertical: 40}, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+                <Text style={[styles.sectionTitle, {marginBottom: 32}, isDark && { color: '#FFFFFF' }]}>Total: ₹{totalAmount}</Text>
                 
                 <View style={{padding: 16, backgroundColor: '#fff', borderRadius: 16, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10}}>
                   <QRCode
@@ -799,17 +815,17 @@ export default function ScanScreen() {
                 </View>
 
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 32, gap: 8}}>
-                  <Ionicons name="scan-outline" size={24} color={COLORS.text.secondary} />
-                  <Text style={styles.subText}>Scan with GPay or another UPI App</Text>
+                  <Ionicons name="scan-outline" size={24} color={isDark ? '#60A5FA' : COLORS.text.secondary} />
+                  <Text style={[styles.subText, isDark && { color: '#CBD5E1' }]}>Scan with GPay or another UPI App</Text>
                 </View>
                 
-                <View style={{backgroundColor: COLORS.status.warning + '20', padding: 12, borderRadius: 8, marginTop: 24, width: '100%'}}>
-                  <Text style={[styles.subText, {color: COLORS.status.warning, textAlign: 'center'}]}>DEMO PAYMENT — No real money transferred.</Text>
+                <View style={[{backgroundColor: COLORS.status.warning + '20', padding: 12, borderRadius: 8, marginTop: 24, width: '100%'}, isDark && { backgroundColor: '#111827', borderColor: '#1E293B', borderWidth: 1 }]}>
+                  <Text style={[styles.subText, {color: isDark ? '#60A5FA' : COLORS.status.warning, textAlign: 'center'}]}>DEMO PAYMENT — No real money transferred.</Text>
                 </View>
               </View>
             </ScrollView>
 
-            <View style={styles.bottomActionsAbsolute}>
+            <View style={[styles.bottomActionsAbsolute, isDark && { backgroundColor: '#000000' }]}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Pressable 
                   style={styles.primaryButtonFlex} 
@@ -830,55 +846,55 @@ export default function ScanScreen() {
 
       {scanState === 'payment_processing' && (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.brand.primary} />
-          <Text style={styles.titleText}>Processing Demo Payment</Text>
-          <Text style={styles.subText}>This is a simulated transaction. Please wait.</Text>
+          <ActivityIndicator size="large" color={isDark ? '#3B82F6' : COLORS.brand.primary} />
+          <Text style={[styles.titleText, isDark && { color: '#FFFFFF' }]}>Processing Demo Payment</Text>
+          <Text style={[styles.subText, isDark && { color: '#CBD5E1' }]}>This is a simulated transaction. Please wait.</Text>
         </View>
       )}
 
       {scanState === 'saving' && (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.brand.primary} />
-          <Text style={styles.titleText}>{scanMode === 'stock_in' ? 'Saving Inventory' : 'Issuing Inventory'}</Text>
-          <Text style={styles.subText}>Updating stock...</Text>
+          <ActivityIndicator size="large" color={isDark ? '#3B82F6' : COLORS.brand.primary} />
+          <Text style={[styles.titleText, isDark && { color: '#FFFFFF' }]}>{scanMode === 'stock_in' ? 'Saving Inventory' : 'Issuing Inventory'}</Text>
+          <Text style={[styles.subText, isDark && { color: '#CBD5E1' }]}>Updating stock...</Text>
         </View>
       )}
 
       {scanState === 'success' && (
         <View style={styles.centerContainer}>
-          <Ionicons name="checkmark-circle" size={80} color={COLORS.status.healthy} />
-          <Text style={styles.titleText}>{scanMode === 'stock_in' ? 'Stock Added Successfully' : 'Payment Confirmed — Stock Updated Successfully'}</Text>
+          <Ionicons name="checkmark-circle" size={80} color={isDark ? '#3B82F6' : COLORS.status.healthy} />
+          <Text style={[styles.titleText, isDark && { color: '#FFFFFF' }]}>{scanMode === 'stock_in' ? 'Stock Added Successfully' : 'Payment Confirmed — Stock Updated Successfully'}</Text>
           
-          <View style={styles.successCard}>
+          <View style={[styles.successCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
             {scanMode === 'stock_out' && (
               <>
-                <Text style={styles.summaryTitle}>Demo Payment</Text>
-                <Text style={styles.summarySub}>This is a simulated payment for demonstration purposes. No real money has been charged.</Text>
-                <View style={styles.divider} />
+                <Text style={[styles.summaryTitle, isDark && { color: '#FFFFFF' }]}>Demo Payment</Text>
+                <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>This is a simulated payment for demonstration purposes. No real money has been charged.</Text>
+                <View style={[styles.divider, isDark && { backgroundColor: '#1E293B' }]} />
               </>
             )}
-            <Text style={styles.summaryTitle}>{medicineName} {strength}</Text>
-            <Text style={styles.summarySub}>Batch: <Text style={TYPOGRAPHY.monoBold}>{scanMode === 'stock_in' ? batchNumber : selectedBatch?.batchNumber}</Text></Text>
-            <View style={styles.divider} />
-            <Text style={styles.summarySub}>Quantity {scanMode === 'stock_in' ? 'Added' : 'Issued'}: <Text style={{color: scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info, ...TYPOGRAPHY.bodyBold}}>{scanMode === 'stock_in' ? '+' : '-'}{quantity}</Text></Text>
+            <Text style={[styles.summaryTitle, isDark && { color: '#FFFFFF' }]}>{medicineName} {strength}</Text>
+            <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>Batch: <Text style={[TYPOGRAPHY.monoBold, isDark && { color: '#60A5FA' }]}>{scanMode === 'stock_in' ? batchNumber : selectedBatch?.batchNumber}</Text></Text>
+            <View style={[styles.divider, isDark && { backgroundColor: '#1E293B' }]} />
+            <Text style={[styles.summarySub, isDark && { color: '#CBD5E1' }]}>Quantity {scanMode === 'stock_in' ? 'Added' : 'Issued'}: <Text style={{color: isDark ? (scanMode === 'stock_in' ? '#3B82F6' : '#60A5FA') : (scanMode === 'stock_in' ? COLORS.status.healthy : COLORS.status.info), ...TYPOGRAPHY.bodyBold}}>{scanMode === 'stock_in' ? '+' : '-'}{quantity}</Text></Text>
           </View>
 
           <View style={styles.bottomActionsSuccess}>
             {scanMode === 'stock_out' && (
-              <Pressable style={[styles.primaryButton, {backgroundColor: COLORS.status.info, marginBottom: 16}]} onPress={exportBillPDF}>
+              <Pressable style={[styles.primaryButton, {backgroundColor: isDark ? '#2563EB' : COLORS.status.info, marginBottom: 16}]} onPress={exportBillPDF}>
                 <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
               </Pressable>
             )}
             <Pressable style={styles.primaryButton} onPress={() => router.navigate('/inventory')}>
               <Text style={styles.primaryButtonText}>View Inventory</Text>
             </Pressable>
-            <Pressable style={[styles.secondaryButton, {marginTop: 16}]} onPress={() => {
+            <Pressable style={[styles.secondaryButton, {marginTop: 16}, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} onPress={() => {
               setScanState('camera');
               setCapturedUri(null);
               setResult(null);
               setQuantity('');
             }}>
-              <Text style={styles.secondaryButtonText}>Scan Another Medicine</Text>
+              <Text style={[styles.secondaryButtonText, isDark && { color: '#CBD5E1' }]}>Scan Another Medicine</Text>
             </Pressable>
           </View>
         </View>

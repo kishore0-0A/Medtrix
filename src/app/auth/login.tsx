@@ -20,13 +20,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
 import { Auth } from '../../supabase';
 import { useTranslation } from 'react-i18next';
-import { changeLanguage } from '../../i18n';
+
 /* ============================================================
    LOGIN SCREEN
 ============================================================ */
 
 export default function LoginScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);

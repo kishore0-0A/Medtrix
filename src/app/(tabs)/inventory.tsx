@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useLocalizedMedicine } from '../../hooks/useLocalizedMedicine';
-import { COLORS, TYPOGRAPHY, GLASS } from '../../theme';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme';
+import { useThemeContext } from '../../context/ThemeContext';
 import { Database } from '../../supabase';
 import type { InventoryItem, InventoryStatus } from '../../supabase/database';
 
@@ -34,7 +34,8 @@ const formatInventoryCount = (items: InventoryItem[]) => {
 };
 
 export default function InventoryScreen() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
+  const { isDark, glass } = useThemeContext();
   const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -93,12 +94,34 @@ export default function InventoryScreen() {
   }, [activeFilter, items, query]);
 
   const getStatusColor = (status: InventoryStatus) => {
+    if (isDark) {
+      switch (status) {
+        case 'healthy': return '#60A5FA';
+        case 'low': return '#3B82F6';
+        case 'expiring': return '#60A5FA';
+        case 'critical': return '#93C5FD';
+        default: return '#CBD5E1';
+      }
+    }
     switch (status) {
       case 'healthy': return COLORS.status.healthy;
       case 'low': return COLORS.status.warning;
       case 'expiring': return COLORS.status.expiring;
       case 'critical': return COLORS.status.critical;
       default: return COLORS.text.muted;
+    }
+  };
+
+  const getStatusBg = (status: InventoryStatus) => {
+    if (isDark) {
+      return 'rgba(37, 99, 235, 0.16)';
+    }
+    switch (status) {
+      case 'healthy': return COLORS.status.healthyBg;
+      case 'low': return COLORS.status.warningBg;
+      case 'expiring': return COLORS.status.expiringBg;
+      case 'critical': return COLORS.status.criticalBg;
+      default: return 'rgba(241, 245, 249, 0.8)';
     }
   };
 
@@ -113,31 +136,34 @@ export default function InventoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.canvas} />
+    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#000000' }]} edges={['top']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? '#000000' : COLORS.background.canvas} />
 
-      <View style={[styles.bgGlowTop, { pointerEvents: 'none' }]} />
+      <View style={[styles.bgGlowTop, isDark && { backgroundColor: '#1D4ED8', opacity: 0.15 }, { pointerEvents: 'none' }]} />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inventory</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>Inventory</Text>
+        <Text style={[styles.headerSubtitle, isDark && { color: '#CBD5E1' }]}>
           {loading ? 'Syncing scanned medicines...' : formatInventoryCount(items)}
         </Text>
       </View>
 
       <View style={styles.searchContainer}>
-        <View style={[styles.searchBox, GLASS.secondary]}>
-          <Ionicons name="search" size={20} color={COLORS.text.muted} style={styles.searchIcon} />
+        <View style={[styles.searchBox, glass.secondary, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+          <Ionicons name="search" size={20} color={isDark ? '#94A3B8' : COLORS.text.muted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isDark && { color: '#FFFFFF' }]}
             value={query}
             onChangeText={setQuery}
             placeholder="Search medicines, batches..."
-            placeholderTextColor={COLORS.text.muted}
+            placeholderTextColor={isDark ? '#94A3B8' : COLORS.text.muted}
           />
         </View>
-        <Pressable style={[styles.filterButton, GLASS.secondary]} onPress={() => loadInventory(true)}>
-          <Ionicons name="refresh-outline" size={20} color={COLORS.brand.primary} />
+        <Pressable
+          style={[styles.filterButton, glass.secondary, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}
+          onPress={() => loadInventory(true)}
+        >
+          <Ionicons name="refresh-outline" size={20} color={isDark ? '#60A5FA' : COLORS.brand.primary} />
         </Pressable>
       </View>
 
@@ -150,12 +176,21 @@ export default function InventoryScreen() {
                 key={f}
                 style={[
                   styles.filterChip,
-                  GLASS.secondary,
-                  isActive && styles.filterChipActive
+                  glass.secondary,
+                  isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' },
+                  isActive && styles.filterChipActive,
+                  isActive && isDark && { backgroundColor: 'rgba(37, 99, 235, 0.20)', borderColor: '#3B82F6' },
                 ]}
                 onPress={() => setActiveFilter(f)}
               >
-                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    isDark && { color: '#CBD5E1' },
+                    isActive && styles.filterChipTextActive,
+                    isActive && isDark && { color: '#60A5FA' },
+                  ]}
+                >
                   {f}
                 </Text>
               </Pressable>
@@ -168,35 +203,35 @@ export default function InventoryScreen() {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadInventory(true)} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadInventory(true)} colors={[COLORS.brand.primary]} tintColor={isDark ? '#60A5FA' : COLORS.brand.primary} />
         }
       >
         <Pressable 
-          style={[styles.importActionCard, GLASS.standard]} 
+          style={[styles.importActionCard, glass.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]} 
           onPress={() => router.push('/bulk-import')}
         >
-          <View style={styles.importIconContainer}>
-            <Ionicons name="document-text-outline" size={24} color={COLORS.brand.primary} />
+          <View style={[styles.importIconContainer, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.16)' }]}>
+            <Ionicons name="document-text-outline" size={24} color={isDark ? '#60A5FA' : COLORS.brand.primary} />
           </View>
           <View style={styles.importTextContainer}>
-            <Text style={styles.importActionTitle}>Upload Invoice</Text>
-            <Text style={styles.importActionSub}>Import multiple medicines from one PDF</Text>
+            <Text style={[styles.importActionTitle, isDark && { color: '#FFFFFF' }]}>Upload Invoice</Text>
+            <Text style={[styles.importActionSub, isDark && { color: '#CBD5E1' }]}>Import multiple medicines from one PDF</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.text.muted} />
+          <Ionicons name="chevron-forward" size={20} color={isDark ? '#CBD5E1' : COLORS.text.muted} />
         </Pressable>
         {loading && (
-          <View style={[styles.stateCard, GLASS.standard]}>
-            <ActivityIndicator color={COLORS.brand.primary} />
-            <Text style={styles.stateTitle}>Loading inventory</Text>
-            <Text style={styles.stateText}>Pulling scanned medicine batches from Supabase.</Text>
+          <View style={[styles.stateCard, glass.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+            <ActivityIndicator color={isDark ? '#3B82F6' : COLORS.brand.primary} />
+            <Text style={[styles.stateTitle, isDark && { color: '#FFFFFF' }]}>Loading inventory</Text>
+            <Text style={[styles.stateText, isDark && { color: '#CBD5E1' }]}>Pulling scanned medicine batches from Supabase.</Text>
           </View>
         )}
 
         {!loading && error && (
-          <View style={[styles.stateCard, GLASS.standard]}>
-            <Ionicons name="cloud-offline-outline" size={28} color={COLORS.status.critical} />
-            <Text style={styles.stateTitle}>Inventory unavailable</Text>
-            <Text style={styles.stateText}>{error}</Text>
+          <View style={[styles.stateCard, glass.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+            <Ionicons name="cloud-offline-outline" size={28} color={isDark ? '#93C5FD' : COLORS.status.critical} />
+            <Text style={[styles.stateTitle, isDark && { color: '#FFFFFF' }]}>Inventory unavailable</Text>
+            <Text style={[styles.stateText, isDark && { color: '#CBD5E1' }]}>{error}</Text>
             <Pressable style={styles.retryButton} onPress={() => loadInventory()}>
               <Text style={styles.retryButtonText}>Try Again</Text>
             </Pressable>
@@ -204,42 +239,42 @@ export default function InventoryScreen() {
         )}
 
         {!loading && !error && filteredItems.length === 0 && (
-          <View style={[styles.stateCard, GLASS.standard]}>
-            <Ionicons name="cube-outline" size={30} color={COLORS.brand.primary} />
-            <Text style={styles.stateTitle}>No medicines found</Text>
-            <Text style={styles.stateText}>
+          <View style={[styles.stateCard, glass.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+            <Ionicons name="cube-outline" size={30} color={isDark ? '#60A5FA' : COLORS.brand.primary} />
+            <Text style={[styles.stateTitle, isDark && { color: '#FFFFFF' }]}>No medicines found</Text>
+            <Text style={[styles.stateText, isDark && { color: '#CBD5E1' }]}>
               Scan a medicine cover and confirm it to add the batch here.
             </Text>
           </View>
         )}
 
         {!loading && !error && filteredItems.map((item) => (
-          <View key={item.id} style={[styles.medicineCard, GLASS.standard]}>
+          <View key={item.id} style={[styles.medicineCard, glass.standard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleCol}>
-                <Text style={styles.medicineName}>{item.translations?.[i18n.language]?.name || item.name}</Text>
-                <Text style={styles.medicineStrength}>
+                <Text style={[styles.medicineName, isDark && { color: '#FFFFFF' }]}>{item.translations?.[i18n.language]?.name || item.name}</Text>
+                <Text style={[styles.medicineStrength, isDark && { color: '#CBD5E1' }]}>
                   {[item.translations?.[i18n.language]?.strength || item.strength, item.translations?.[i18n.language]?.form || item.form].filter(Boolean).join(' - ') || 'Medicine'}
                 </Text>
               </View>
-              <View style={styles.quantityContainer}>
+              <View style={[styles.quantityContainer, { backgroundColor: getStatusBg(item.status) }]}>
                 <Text style={[styles.quantityText, { color: getStatusColor(item.status) }]}>
                   {item.quantity}
                 </Text>
-                <Text style={styles.unitText}>units</Text>
+                <Text style={[styles.unitText, { color: getStatusColor(item.status) }]}>units</Text>
               </View>
             </View>
 
-            <View style={styles.cardFooter}>
+            <View style={[styles.cardFooter, isDark && { borderTopColor: '#1E293B' }]}>
               <View style={styles.metaCol}>
-                <Text style={styles.metaLabel}>BATCH</Text>
-                <Text style={styles.metaValue}>{item.batchNumber}</Text>
+                <Text style={[styles.metaLabel, isDark && { color: '#94A3B8' }]}>BATCH</Text>
+                <Text style={[styles.metaValue, isDark && { color: '#FFFFFF' }]}>{item.batchNumber}</Text>
               </View>
               <View style={styles.metaCol}>
-                <Text style={styles.metaLabel}>EXP</Text>
-                <Text style={styles.metaValue}>{item.expiryDate}</Text>
+                <Text style={[styles.metaLabel, isDark && { color: '#94A3B8' }]}>EXP</Text>
+                <Text style={[styles.metaValue, isDark && { color: '#FFFFFF' }]}>{item.expiryDate}</Text>
               </View>
-              <View style={styles.statusPill}>
+              <View style={[styles.statusPill, { backgroundColor: getStatusBg(item.status), borderColor: isDark ? '#1E293B' : getStatusColor(item.status) + '30' }]}>
                 <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                   {getStatusLabel(item.status)}
@@ -271,13 +306,14 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
   },
   headerTitle: {
     ...TYPOGRAPHY.heading800,
     fontSize: 28,
     color: COLORS.text.primary,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     ...TYPOGRAPHY.mono,
@@ -288,7 +324,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   searchBox: {
     flex: 1,
@@ -297,6 +333,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 16,
     marginRight: 12,
+    borderRadius: 14,
   },
   searchIcon: {
     marginRight: 10,
@@ -312,22 +349,27 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 14,
   },
   filterScrollWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   filterScroll: {
     paddingHorizontal: 20,
+    paddingVertical: 2,
   },
   filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 10,
-    borderRadius: 20,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border.subtle,
   },
   filterChipActive: {
     borderColor: COLORS.brand.primary,
     backgroundColor: COLORS.brand.verySoft,
+    ...SHADOWS.soft,
   },
   filterChipText: {
     ...TYPOGRAPHY.bodyMedium,
@@ -345,8 +387,9 @@ const styles = StyleSheet.create({
     minHeight: 190,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
     marginBottom: 16,
+    borderRadius: 18,
   },
   stateTitle: {
     ...TYPOGRAPHY.heading,
@@ -366,8 +409,9 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 12,
     backgroundColor: COLORS.brand.primary,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 10,
+    ...SHADOWS.soft,
   },
   retryButtonText: {
     ...TYPOGRAPHY.bodyBold,
@@ -375,14 +419,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   medicineCard: {
-    padding: 16,
-    marginBottom: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderRadius: 18,
+    ...SHADOWS.soft,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   cardTitleCol: {
     flex: 1,
@@ -390,26 +436,33 @@ const styles = StyleSheet.create({
   },
   medicineName: {
     ...TYPOGRAPHY.heading,
-    fontSize: 18,
+    fontSize: 17,
     color: COLORS.text.primary,
-    marginBottom: 2,
+    marginBottom: 3,
+    letterSpacing: -0.3,
   },
   medicineStrength: {
     ...TYPOGRAPHY.body,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.text.secondary,
   },
   quantityContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 54,
   },
   quantityText: {
     ...TYPOGRAPHY.heading,
-    fontSize: 22,
+    fontSize: 18,
+    lineHeight: 22,
   },
   unitText: {
-    ...TYPOGRAPHY.body,
-    fontSize: 11,
-    color: COLORS.text.muted,
+    ...TYPOGRAPHY.bodyBold,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -426,6 +479,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: COLORS.text.muted,
     marginBottom: 2,
+    letterSpacing: 0.5,
   },
   metaValue: {
     ...TYPOGRAPHY.mono,
@@ -436,23 +490,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1,
   },
   statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 6,
   },
   statusText: {
     ...TYPOGRAPHY.bodyBold,
     fontSize: 11,
   },
-  importActionCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 16, backgroundColor: 'rgba(37, 99, 235, 0.05)', borderWidth: 1, borderColor: COLORS.brand.verySoft },
-  importIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(37, 99, 235, 0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  importActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 16,
+    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+    borderWidth: 1,
+    borderColor: COLORS.brand.verySoft,
+    ...SHADOWS.soft,
+  },
+  importIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
   importTextContainer: { flex: 1 },
   importActionTitle: { ...TYPOGRAPHY.heading, fontSize: 16, color: COLORS.text.primary, marginBottom: 2 },
   importActionSub: { ...TYPOGRAPHY.body, fontSize: 13, color: COLORS.text.secondary },

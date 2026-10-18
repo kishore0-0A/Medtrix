@@ -3,7 +3,7 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Pressable,
+
   StatusBar,
   StyleSheet,
   Text,
@@ -960,10 +960,7 @@ export default function SplashScreen() {
     outputRange: [1, 1.08],
   });
 
-  const scannerOpacityValue = scannerPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.5, 1],
-  });
+
 
   const scanBeamY = scanBeam.interpolate({
     inputRange: [0, 1],

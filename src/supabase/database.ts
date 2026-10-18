@@ -920,7 +920,7 @@ export const Database = {
         return { data: null, error };
       }
 
-      return { data: { success: true }, error: null };
+      return { data: data || { success: true }, error: null };
     } catch (error: any) {
       if (error?.message?.includes('UnknownHostException') || error?.message?.includes('fetch failed') || error?.message?.includes('Network request failed')) {
          console.log('Mocking success for unconfigured database connection.');

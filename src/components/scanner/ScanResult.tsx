@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, GLASS, SHADOWS } from '../../theme';
 import { FrontendResultModel } from '../../services/cv/models';
 
