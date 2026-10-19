@@ -156,7 +156,7 @@
     "export_comprehensive_pdf": "முழுமையான அறிக்கை (PDF)",
     "report_generated_success": "PDF அறிக்கை வெற்றிகரமாக உருவாக்கப்பட்டு பகிரத் தயாராக உள்ளது.",
     "report_generation_failed": "அறிக்கையை உருவாக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
-    "generating_report": "PDF உருவாக்கப்படுகிறது..."
+    "generating_pdf": "PDF உருவாக்கப்படுகிறது..."
   },
   "assistant": {
     "title": "Medtrix AI உதவியாளர்",

@@ -156,7 +156,7 @@
     "export_comprehensive_pdf": "पूर्ण ट्राइएज रिपोर्ट (PDF)",
     "report_generated_success": "PDF रिपोर्ट सफलतापूर्वक जनरेट हो गई और साझा करने के लिए तैयार है।",
     "report_generation_failed": "रिपोर्ट जनरेट करने में विफल। कृपया पुनः प्रयास करें।",
-    "generating_report": "PDF जनरेट हो रहा है..."
+    "generating_pdf": "PDF जनरेट हो रहा है..."
   },
   "assistant": {
     "title": "Medtrix AI सहायक",

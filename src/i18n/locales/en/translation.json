@@ -156,7 +156,7 @@
     "export_comprehensive_pdf": "Full Triage Report (PDF)",
     "report_generated_success": "PDF report generated and ready to share.",
     "report_generation_failed": "Failed to generate report. Please try again.",
-    "generating_report": "Generating PDF..."
+    "generating_pdf": "Generating PDF..."
   },
   "assistant": {
     "title": "Medtrix AI Assistant",
