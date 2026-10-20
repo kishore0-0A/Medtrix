@@ -274,10 +274,23 @@ export default function ScanScreen() {
       console.log("batch_number:", res.batch.batchNumber);
       console.log("expiry_date:", res.batch.expiryDate);
 
+      if (res.isOfflineFallback) {
+        Alert.alert(
+          'OCR Server Offline',
+          'Could not reach OCR backend server. Sample medicine details loaded for review — feel free to edit any fields.',
+          [{ text: 'Continue' }]
+        );
+      }
+
       setScanState('ocr_review');
-    } catch (error) {
-      console.error(error);
-      setScanError('Could not process this medicine cover.');
+    } catch (error: any) {
+      console.error('Scan processing error:', error);
+      const isTimeout = error?.message?.includes('timed out') || error?.message?.includes('ETIMEDOUT');
+      setScanError(
+        isTimeout
+          ? 'Connection to OCR backend timed out. You can enter details manually.'
+          : 'Could not process this medicine cover. You can enter details manually.'
+      );
       setScanState('preview');
     } finally {
       setIsAnalyzing(false);
@@ -582,7 +595,28 @@ export default function ScanScreen() {
           <View style={styles.imagePreviewContainer}>
             {capturedUri && <Image source={{ uri: capturedUri }} style={StyleSheet.absoluteFill} />}
           </View>
-          {scanError && <Text style={styles.errorText}>{scanError}</Text>}
+          {scanError && (
+            <View style={{ paddingHorizontal: 20, marginVertical: 8, alignItems: 'center' }}>
+              <Text style={[styles.errorText, isDark && { color: '#F87171' }]}>{scanError}</Text>
+              <Pressable 
+                style={[
+                  styles.secondaryButton, 
+                  { marginTop: 10, paddingVertical: 12, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }, 
+                  isDark && { backgroundColor: '#1E293B', borderColor: '#334155' }
+                ]}
+                onPress={() => {
+                  setMedicineName('');
+                  setBatchNumber('');
+                  setExpDate('');
+                  setScanError(null);
+                  setScanState('ocr_review');
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color={isDark ? '#60A5FA' : COLORS.brand.primary} style={{ marginRight: 6 }} />
+                <Text style={[styles.secondaryButtonText, isDark && { color: '#60A5FA' }]}>Enter Details Manually</Text>
+              </Pressable>
+            </View>
+          )}
           <View style={styles.bottomActionsRow}>
             <Pressable style={styles.secondaryButtonFlex} onPress={() => setScanState('camera')}>
               <Text style={styles.secondaryButtonText}>Retake</Text>

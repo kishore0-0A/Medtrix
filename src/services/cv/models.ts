@@ -83,4 +83,5 @@ export interface FrontendResultModel {
   items: DetectedItem[];
   capturedImageUri?: string | null;
   rawOcrText?: string | null;
+  isOfflineFallback?: boolean;
 }
