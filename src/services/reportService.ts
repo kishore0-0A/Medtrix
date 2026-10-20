@@ -1767,6 +1767,12 @@ export const generateClinicalTriageReport = async (
 };
 
 /**
+ * Global mutex flag to prevent overlapping share requests.
+ * On Android, ExpoSharing rejects concurrent calls with "Another share request is being processed now".
+ */
+let isSharingInProgress = false;
+
+/**
  * Helper to render HTML to PDF, save with clean sanitized filename, and trigger sharing dialog.
  * Uses in-memory base64 to write directly into cacheDirectory, avoiding Android 11+ scoped storage / Print cache read errors.
  */
@@ -1775,42 +1781,67 @@ export async function executePrintAndShare(
   filename: string,
   dialogTitle: string
 ): Promise<ReportGenerationResult> {
-  // Request base64: true so we receive the complete PDF bytes directly from the native module
-  const { uri, base64 } = await Print.printToFileAsync({ html, base64: true });
+  if (isSharingInProgress) {
+    console.log('[Sharing] A share request is already in progress, ignoring duplicate call.');
+    return { success: true, filename };
+  }
 
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-  let finalUri = uri;
+  isSharingInProgress = true;
+  try {
+    // Request base64: true so we receive the complete PDF bytes directly from the native module
+    const { uri, base64 } = await Print.printToFileAsync({ html, base64: true });
 
-  const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-  if (baseDir) {
-    const targetPath = `${baseDir}${sanitizedFilename}`;
-    if (base64) {
-      try {
-        await FileSystem.writeAsStringAsync(targetPath, base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        finalUri = targetPath;
-      } catch (writeErr) {
-        console.warn('Could not write PDF to cache directory from base64:', writeErr);
-      }
-    } else {
-      try {
-        await FileSystem.copyAsync({ from: uri, to: targetPath });
-        finalUri = targetPath;
-      } catch (copyErr) {
-        console.warn('Could not copy PDF file, using default URI:', copyErr);
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    let finalUri = uri;
+
+    const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+    if (baseDir) {
+      const targetPath = `${baseDir}${sanitizedFilename}`;
+      if (base64) {
+        try {
+          await FileSystem.writeAsStringAsync(targetPath, base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          finalUri = targetPath;
+        } catch (writeErr) {
+          console.warn('Could not write PDF to cache directory from base64:', writeErr);
+        }
+      } else {
+        try {
+          await FileSystem.copyAsync({ from: uri, to: targetPath });
+          finalUri = targetPath;
+        } catch (copyErr) {
+          console.warn('Could not copy PDF file, using default URI:', copyErr);
+        }
       }
     }
-  }
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(finalUri, {
-      mimeType: 'application/pdf',
-      UTI: '.pdf',
-      dialogTitle,
-    });
-  }
+    if (await Sharing.isAvailableAsync()) {
+      try {
+        await Sharing.shareAsync(finalUri, {
+          mimeType: 'application/pdf',
+          UTI: '.pdf',
+          dialogTitle,
+        });
+      } catch (shareErr: any) {
+        const errorMsg = shareErr?.message || String(shareErr);
+        if (errorMsg.includes('Another share request is being processed')) {
+          console.log('[Sharing] System share dialog is already active.');
+        } else {
+          console.warn('[Sharing] shareAsync warning:', shareErr);
+        }
+      }
+    }
 
-  return { success: true, uri: finalUri, filename };
+    return { success: true, uri: finalUri, filename };
+  } catch (err: any) {
+    console.warn('[Sharing] executePrintAndShare error:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  } finally {
+    setTimeout(() => {
+      isSharingInProgress = false;
+    }, 1200);
+  }
 }
+
 

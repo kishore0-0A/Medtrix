@@ -42,6 +42,7 @@ export default function CheckoutScreen() {
   const [inputQuantity, setInputQuantity] = useState('1');
   const [, setCapturedUri] = useState<string | null>(null);
   const [, setPaymentMethod] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const beamAnim = useRef(new Animated.Value(0)).current;
 
   const loadInventory = useCallback(async () => {
@@ -238,6 +239,8 @@ export default function CheckoutScreen() {
   };
 
   const exportBillPDF = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       let itemsHtml = cart.map(item => `
         <tr style="border-bottom: 1px solid #eee;">
@@ -271,8 +274,12 @@ export default function CheckoutScreen() {
         </html>
       `;
       await executePrintAndShare(html, `Medtrix_Receipt_${Date.now()}.pdf`, 'Share Receipt');
-    } catch (e) {
-      console.warn('Receipt sharing error:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('Another share request is being processed')) {
+        console.warn('Receipt sharing error:', e);
+      }
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -607,8 +614,20 @@ export default function CheckoutScreen() {
           </View>
 
           <View style={styles.bottomActionsAbsolute}>
-            <Pressable style={[styles.primaryButtonFlex, { backgroundColor: COLORS.brand.primary }]} onPress={exportBillPDF}>
-              <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+            <Pressable 
+              style={[
+                styles.primaryButtonFlex, 
+                { backgroundColor: COLORS.brand.primary },
+                isExporting && { opacity: 0.7 }
+              ]} 
+              onPress={exportBillPDF}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+              )}
             </Pressable>
             <Pressable style={[styles.secondaryButtonFlex, { marginTop: 12 }, isDark && { backgroundColor: '#111827', borderColor: '#1E293B' }]} onPress={() => router.push('/inventory')}>
               <Text style={[styles.secondaryButtonText, isDark && { color: '#CBD5E1' }]}>View Updated Inventory</Text>

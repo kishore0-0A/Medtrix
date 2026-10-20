@@ -51,6 +51,7 @@ export default function ScanScreen() {
   const [quantity, setQuantity] = useState<string>('');
   const [orderId, setOrderId] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const beamAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -425,6 +426,8 @@ export default function ScanScreen() {
   };
 
   const exportBillPDF = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       const price = parseInt(quantity || '0', 10) * 150;
       const html = `
@@ -456,8 +459,12 @@ export default function ScanScreen() {
         </html>
       `;
       await executePrintAndShare(html, `Medtrix_Receipt_${Date.now()}.pdf`, 'Share Receipt');
-    } catch (e) {
-      console.warn('Receipt sharing error:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('Another share request is being processed')) {
+        console.warn('Receipt sharing error:', e);
+      }
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -918,8 +925,20 @@ export default function ScanScreen() {
 
           <View style={styles.bottomActionsSuccess}>
             {scanMode === 'stock_out' && (
-              <Pressable style={[styles.primaryButton, {backgroundColor: isDark ? '#2563EB' : COLORS.status.info, marginBottom: 16}]} onPress={exportBillPDF}>
-                <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+              <Pressable 
+                style={[
+                  styles.primaryButton, 
+                  { backgroundColor: isDark ? '#2563EB' : COLORS.status.info, marginBottom: 16 },
+                  isExporting && { opacity: 0.7 }
+                ]} 
+                onPress={exportBillPDF}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>View Demo Bill (PDF)</Text>
+                )}
               </Pressable>
             )}
             <Pressable style={styles.primaryButton} onPress={() => router.navigate('/inventory')}>
