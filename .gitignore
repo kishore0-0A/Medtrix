@@ -42,3 +42,10 @@ example
 # generated native folders
 /ios
 /android
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
