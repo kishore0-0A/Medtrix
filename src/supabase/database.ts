@@ -285,6 +285,32 @@ export let mockInventoryStore: InventoryItem[] = [
   },
 ];
 
+const LOCAL_INVENTORY_STORAGE_KEY = '@medtrix_local_inventory_v2';
+
+export async function loadLocalInventory(): Promise<InventoryItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_INVENTORY_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        mockInventoryStore = parsed;
+        return mockInventoryStore;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load local inventory from storage:', e);
+  }
+  return mockInventoryStore;
+}
+
+export async function persistLocalInventory(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LOCAL_INVENTORY_STORAGE_KEY, JSON.stringify(mockInventoryStore));
+  } catch (e) {
+    console.warn('Failed to persist local inventory to storage:', e);
+  }
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -592,8 +618,9 @@ export const Database = {
   async getInventory() {
     // Return mock data if Supabase is unconfigured so the UI works
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      const items = await loadLocalInventory();
       return {
-        data: [...mockInventoryStore],
+        data: [...items],
         error: null,
       };
     }
@@ -615,9 +642,10 @@ export const Database = {
           response.error
         );
 
+        const items = await loadLocalInventory();
         return {
-          data: null,
-          error: response.error,
+          data: [...items],
+          error: null,
         };
       }
 
@@ -640,9 +668,10 @@ export const Database = {
         error
       );
 
+      const items = await loadLocalInventory();
       return {
-        data: null,
-        error,
+        data: [...items],
+        error: null,
       };
     }
   },
@@ -655,6 +684,7 @@ export const Database = {
     result: FrontendResultModel
   ) {
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      await loadLocalInventory();
       const newItem: InventoryItem = {
         id: `mock-${Date.now()}`,
         medicineId: `med-${Date.now()}`,
@@ -693,6 +723,7 @@ export const Database = {
         status: 'healthy',
       };
       mockInventoryStore.unshift(newItem);
+      await persistLocalInventory();
       return { data: { success: true, id: newItem.id }, error: null };
     }
 
@@ -1056,7 +1087,8 @@ export const Database = {
   // ==========================================================
   // FIND BATCHES BY MEDICINE NAME (FOR STOCK OUT)
   // ==========================================================
-  _findMockBatches(medicineName: string) {
+  async _findMockBatches(medicineName: string) {
+    await loadLocalInventory();
     const cleanTarget = medicineName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const tokens = medicineName.toLowerCase().split(/\s+/).filter(t => t.length >= 3);
 
@@ -1108,6 +1140,7 @@ export const Database = {
         status: 'healthy',
       };
       mockInventoryStore.unshift(fallbackItem);
+      await persistLocalInventory();
       matched = [fallbackItem];
     }
 
@@ -1116,7 +1149,7 @@ export const Database = {
 
   async findBatchesByMedicineName(medicineName: string) {
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
-      return this._findMockBatches(medicineName);
+      return await this._findMockBatches(medicineName);
     }
 
     try {
@@ -1129,10 +1162,10 @@ export const Database = {
 
       if (medError) {
         console.warn('findBatchesByMedicineName Supabase error, falling back:', medError);
-        return this._findMockBatches(medicineName);
+        return await this._findMockBatches(medicineName);
       }
       if (!medicines || medicines.length === 0) {
-        return this._findMockBatches(medicineName);
+        return await this._findMockBatches(medicineName);
       }
       
       const medicine = medicines[0];
@@ -1146,17 +1179,17 @@ export const Database = {
         .order('expiry_date', { ascending: true });
 
       if (batchError) {
-        return this._findMockBatches(medicineName);
+        return await this._findMockBatches(medicineName);
       }
 
       const inventory = (batches ?? []).map((row) =>
         toInventoryItem(row as BatchRow & { medicines?: MedicineRow | null })
       );
 
-      return { data: inventory.length > 0 ? inventory : this._findMockBatches(medicineName).data, error: null };
+      return { data: inventory.length > 0 ? inventory : (await this._findMockBatches(medicineName)).data, error: null };
     } catch (error) {
       console.warn('findBatchesByMedicineName catch error, falling back:', error);
-      return this._findMockBatches(medicineName);
+      return await this._findMockBatches(medicineName);
     }
   },
 
@@ -1165,11 +1198,13 @@ export const Database = {
   // ==========================================================
   async processStockOut(batchId: string, issueQuantity: number) {
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      await loadLocalInventory();
       const item = mockInventoryStore.find(i => i.id === batchId);
       if (item) {
         item.quantity = Math.max(0, item.quantity - issueQuantity);
         if (item.quantity === 0) item.status = 'critical';
         else if (item.quantity < 20) item.status = 'low';
+        await persistLocalInventory();
       }
       return { data: { success: true }, error: null };
     }
@@ -1189,11 +1224,13 @@ export const Database = {
       if (error) {
         if (error.message?.includes('UnknownHostException') || error.message?.includes('fetch failed') || error.message?.includes('Network request failed')) {
            console.log('Mocking success for unconfigured database connection.');
+           await loadLocalInventory();
            const item = mockInventoryStore.find(i => i.id === batchId);
            if (item) {
              item.quantity = Math.max(0, item.quantity - issueQuantity);
              if (item.quantity === 0) item.status = 'critical';
              else if (item.quantity < 20) item.status = 'low';
+             await persistLocalInventory();
            }
            return { data: { success: true }, error: null };
         }
@@ -1204,11 +1241,13 @@ export const Database = {
     } catch (error: any) {
       if (error?.message?.includes('UnknownHostException') || error?.message?.includes('fetch failed') || error?.message?.includes('Network request failed')) {
          console.log('Mocking success for unconfigured database connection.');
+         await loadLocalInventory();
          const item = mockInventoryStore.find(i => i.id === batchId);
          if (item) {
            item.quantity = Math.max(0, item.quantity - issueQuantity);
            if (item.quantity === 0) item.status = 'critical';
            else if (item.quantity < 20) item.status = 'low';
+           await persistLocalInventory();
          }
          return { data: { success: true }, error: null };
       }
