@@ -318,7 +318,10 @@ export default function ScanScreen() {
         return;
       }
       setAvailableBatches(data);
-      setSelectedBatch(data[0]); // Default to first (FEFO)
+      const matchingBatch = batchNumber
+        ? data.find(b => b.batchNumber.toLowerCase() === batchNumber.trim().toLowerCase())
+        : null;
+      setSelectedBatch(matchingBatch || data[0]); // Default to matching scanned batch or first (FEFO)
       setScanState('batch_selection');
     }
   };

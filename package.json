@@ -74,7 +74,6 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "ocr:start": "python -m uvicorn ocr_server.main:app --host 0.0.0.0 --port 8000 --reload",
-    "build:apk": "eas build -p android --profile preview",
     "postinstall": "node ./scripts/patch-expo-modules.js && (prisma skills sync || exit 0)"
   },
   "private": true
