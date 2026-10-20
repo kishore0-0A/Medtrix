@@ -46,22 +46,30 @@ COMMON_BRANDS = {
 }
 
 def parse_medicine_text(raw_text: str) -> Dict[str, Any]:
+    import unicodedata
+    # Normalize unicode accents (e.g. ä -> a, ö -> o)
+    raw_text = unicodedata.normalize('NFKD', raw_text).encode('ASCII', 'ignore').decode('utf-8')
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
     full_text = " ".join(lines)
     
-    # 1. Strength (e.g. 500mg, 650 mg, or OCR-truncated 500m)
+    # 1. Strength (e.g. 500mg, 650 mg, or OCR-truncated 500m / 500 without mg)
     strength_match = re.search(r'(\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|%w\/v|%w\/w|IU))\b', full_text, re.IGNORECASE)
     if strength_match:
         strength = strength_match.group(1).strip()
     else:
         # Match common OCR-truncated strengths like "500m", "650m", "250m"
         m_trunc = re.search(r'\b(\d{2,4})\s*m\b', full_text, re.IGNORECASE)
-        strength = f"{m_trunc.group(1)}mg" if m_trunc else None
+        if m_trunc:
+            strength = f"{m_trunc.group(1)}mg"
+        else:
+            # Match number directly following medicine name (e.g. "AMOXICILLIN 500", "DOLO 650")
+            m_num = re.search(r'\b(?:amoxicillin|amoxil|dolo|augmentin|paracetamol|crocin|calpol|azithral|metformin|pantoprazole|pan)\s*([0-9]{2,4})\b', full_text, re.IGNORECASE)
+            strength = f"{m_num.group(1)}mg" if m_num else None
 
-    # 2. Dosage Form
+    # 2. Dosage Form (matches Tablet, Tablets, Tabletby, etc.)
     dosage_form = None
     for form in KNOWN_FORMS:
-        if re.search(rf'\b{form}\b', full_text, re.IGNORECASE):
+        if re.search(rf'\b{form}', full_text, re.IGNORECASE):
             dosage_form = form.capitalize()
             break
 
@@ -82,13 +90,38 @@ def parse_medicine_text(raw_text: str) -> Dict[str, Any]:
         if not batch_number and batch_matches:
             batch_number = re.sub(r'[^A-Za-z0-9\/-]', '', batch_matches[0]).strip()
 
-    # 4. Manufacturing Date (e.g. 01/2024, 01-24, Jan 2024)
-    mfg_match = re.search(r'(?:Mfg|Mfg\.?\s*Date|Mfd\.?)\s*[:.-]?\s*([0-9]{1,2}[/-][0-9]{2,4}|[A-Za-z]{3}[/-][0-9]{2,4})', full_text, re.IGNORECASE)
-    mfg_date = mfg_match.group(1).strip() if mfg_match else None
+    # 4 & 5. Manufacturing Date & Expiry Date
+    mfg_date = None
+    exp_date = None
 
-    # 5. Expiry Date (e.g. 12/2027, 12-27, Dec 2027)
     exp_match = re.search(r'(?:Exp|Exp\.?\s*Date|Expiry)\s*[:.-]?\s*([0-9]{1,2}[/-][0-9]{2,4}|[A-Za-z]{3}[/-][0-9]{2,4})', full_text, re.IGNORECASE)
-    exp_date = exp_match.group(1).strip() if exp_match else None
+    if exp_match:
+        exp_date = exp_match.group(1).strip()
+
+    mfg_match = re.search(r'(?:Mfg|Mfg\.?\s*Date|Mfd\.?)\s*[:.-]?\s*([0-9]{1,2}[/-][0-9]{2,4}|[A-Za-z]{3}[/-][0-9]{2,4})', full_text, re.IGNORECASE)
+    if mfg_match:
+        mfg_date = mfg_match.group(1).strip()
+
+    # Heuristic: if exp_date is missing, parse chronological date pair
+    if not exp_date or not mfg_date:
+        all_dates = re.findall(r'\b([0-9]{1,2}[/-][0-9]{2,4})\b', full_text)
+        if len(all_dates) >= 2:
+            def parse_d_key(d_str):
+                parts = re.split(r'[/-]', d_str)
+                m = int(parts[0]) if len(parts) > 1 and parts[0].isdigit() else 1
+                y = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else int(parts[0]) if parts[0].isdigit() else 2000
+                if y < 100: y += 2000
+                return (y, m)
+            try:
+                sorted_dates = sorted(all_dates, key=parse_d_key)
+                if not mfg_date:
+                    mfg_date = sorted_dates[0]
+                if not exp_date:
+                    exp_date = sorted_dates[-1]
+            except Exception:
+                pass
+        elif len(all_dates) == 1 and not exp_date:
+            exp_date = all_dates[0]
 
     # 6. MRP / Price (e.g. MRP Rs. 42.50, MRP 55.00, Rs. 120)
     mrp_match = re.search(r'(?:M\.?R\.?P\.?|Price|Rs\.?|₹)\s*[:.-]?\s*(?:Rs\.?|₹)?\s*([0-9]+(?:\.[0-9]{1,2})?)', full_text, re.IGNORECASE)
