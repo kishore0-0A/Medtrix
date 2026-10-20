@@ -638,9 +638,18 @@ export default function FloatingAssistant() {
 
   // Camera scan screen collision avoidance: auto-tuck or compact mode
   const isOnCameraScan = pathname === '/(tabs)/scan' || pathname === '/scan';
+  const shouldHideAssistant =
+    pathname?.includes('/auth') ||
+    pathname === '/splash' ||
+    pathname === '/+not-found' ||
+    pathname?.includes('notifications');
+
+  if (shouldHideAssistant) {
+    return null;
+  }
 
   return (
-    <View style={styles.fullscreenLayer} pointerEvents="box-none">
+    <View style={[styles.fullscreenLayer, { pointerEvents: 'box-none' }]}>
       {/* DRAGGABLE LAUNCHER */}
       <Animated.View
         style={[

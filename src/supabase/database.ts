@@ -1,9 +1,36 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FrontendResultModel } from '../services/cv/models';
 import { supabase } from './client';
 
 // ============================================================
 // TYPES
 // ============================================================
+
+export type NotificationCategory =
+  | 'stock_alert'
+  | 'expiry'
+  | 'inventory_movement'
+  | 'system'
+  | 'ai_triage';
+
+export interface NotificationItem {
+  id: string;
+  user_id?: string;
+  title: string;
+  message: string;
+  type: 'warning' | 'success' | 'info' | 'critical' | string;
+  category?: NotificationCategory;
+  data?: {
+    route?: string;
+    medicineId?: string;
+    batchId?: string;
+    quantity?: number;
+    urgency?: 'low' | 'medium' | 'high';
+    [key: string]: any;
+  };
+  is_read: boolean;
+  created_at: string;
+}
 
 export interface MedicineRow {
   id: string;
@@ -930,26 +957,219 @@ export const Database = {
     }
   },
 
-  async getNotifications() {
+  async getNotifications(): Promise<{ data: NotificationItem[] | null; error: any }> {
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
-      return {
-        data: [
-          { id: '1', title: 'Low Stock Alert', message: 'Paracetamol is running low (12 units left).', type: 'warning', is_read: false, created_at: new Date().toISOString() },
-          { id: '2', title: 'Stock In Completed', message: 'Added 50 units of Amoxicillin to inventory.', type: 'success', is_read: true, created_at: new Date(Date.now() - 86400000).toISOString() },
-          { id: '3', title: 'Security Alert', message: 'New login detected from Web Browser.', type: 'info', is_read: false, created_at: new Date(Date.now() - 3600000).toISOString() },
-        ],
-        error: null
-      };
+      try {
+        const stored = await AsyncStorage.getItem('@medtrix_notifications_v1');
+        if (stored) {
+          return { data: JSON.parse(stored), error: null };
+        }
+        const defaultNotifications: NotificationItem[] = [
+          {
+            id: 'mock-notif-1',
+            title: 'Low Stock Alert',
+            message: 'Paracetamol 250mg is below safe reorder threshold (15 units remaining).',
+            type: 'warning',
+            category: 'stock_alert',
+            is_read: false,
+            data: { route: '/(tabs)/inventory', medicineId: 'med-2', quantity: 15 },
+            created_at: new Date(Date.now() - 1000 * 60 * 14).toISOString(),
+          },
+          {
+            id: 'mock-notif-2',
+            title: 'Batch Near Expiry',
+            message: 'Cetirizine 10mg (Batch B-904) expires in less than 30 days.',
+            type: 'warning',
+            category: 'expiry',
+            is_read: false,
+            data: { route: '/(tabs)/alerts', batchNumber: 'B-904' },
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+          },
+          {
+            id: 'mock-notif-3',
+            title: 'Stock In Confirmed',
+            message: '120 units of Amoxicillin 500mg successfully scanned and stocked.',
+            type: 'success',
+            category: 'inventory_movement',
+            is_read: true,
+            data: { route: '/(tabs)/inventory', medicineId: 'med-1', quantity: 120 },
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+          },
+          {
+            id: 'mock-notif-4',
+            title: 'AI Triage Recommended',
+            message: 'Automated batch analysis detected high seasonal demand for Antipyretics.',
+            type: 'info',
+            category: 'ai_triage',
+            is_read: true,
+            data: { route: '/profile/ai-triage', urgency: 'medium' },
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+          },
+          {
+            id: 'mock-notif-5',
+            title: 'Storage Temperature Normal',
+            message: 'Cold chain storage monitors operating within optimal 2°C - 8°C range.',
+            type: 'info',
+            category: 'system',
+            is_read: true,
+            data: { route: '/(tabs)/alerts' },
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+          },
+        ];
+        await AsyncStorage.setItem('@medtrix_notifications_v1', JSON.stringify(defaultNotifications));
+        return { data: defaultNotifications, error: null };
+      } catch {
+        return { data: [], error: null };
+      }
     }
-    const { data, error } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
-    return { data, error };
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return { data: (data as NotificationItem[]) || [], error };
   },
 
-  async markNotificationRead(id: string) {
+  async getUnreadNotificationCount(): Promise<number> {
+    const { data } = await this.getNotifications();
+    if (!data) return 0;
+    return data.filter((n) => !n.is_read).length;
+  },
+
+  async markNotificationRead(id: string): Promise<{ error: any }> {
     if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
-      return { error: null };
+      try {
+        const stored = await AsyncStorage.getItem('@medtrix_notifications_v1');
+        if (stored) {
+          const list: NotificationItem[] = JSON.parse(stored);
+          const updated = list.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+          await AsyncStorage.setItem('@medtrix_notifications_v1', JSON.stringify(updated));
+        }
+        return { error: null };
+      } catch (e) {
+        return { error: e };
+      }
     }
-    return supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    return { error };
+  },
+
+  async markAllNotificationsRead(): Promise<{ error: any }> {
+    if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      try {
+        const stored = await AsyncStorage.getItem('@medtrix_notifications_v1');
+        if (stored) {
+          const list: NotificationItem[] = JSON.parse(stored);
+          const updated = list.map((n) => ({ ...n, is_read: true }));
+          await AsyncStorage.setItem('@medtrix_notifications_v1', JSON.stringify(updated));
+        }
+        return { error: null };
+      } catch (e) {
+        return { error: e };
+      }
+    }
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('is_read', false);
+    return { error };
+  },
+
+  async createNotification(item: {
+    title: string;
+    message: string;
+    type: 'warning' | 'success' | 'info' | 'critical' | string;
+    category?: NotificationCategory;
+    data?: Record<string, any>;
+  }): Promise<{ data: NotificationItem | null; error: any }> {
+    const newNotif: NotificationItem = {
+      id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      title: item.title,
+      message: item.message,
+      type: item.type,
+      category: item.category || 'system',
+      data: item.data || {},
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      try {
+        const stored = await AsyncStorage.getItem('@medtrix_notifications_v1');
+        const list: NotificationItem[] = stored ? JSON.parse(stored) : [];
+        const updated = [newNotif, ...list];
+        await AsyncStorage.setItem('@medtrix_notifications_v1', JSON.stringify(updated));
+        return { data: newNotif, error: null };
+      } catch {
+        return { data: newNotif, error: null };
+      }
+    }
+
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user) {
+      return { data: null, error: new Error('User not authenticated') };
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: user.user.id,
+        title: item.title,
+        message: item.message,
+        type: item.type,
+        category: item.category || 'system',
+        data: item.data || {},
+        is_read: false,
+      })
+      .select()
+      .single();
+
+    return { data: data as NotificationItem, error };
+  },
+
+  async savePushToken(token: string, deviceName?: string, platform?: string): Promise<{ error: any }> {
+    if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      try {
+        await AsyncStorage.setItem('@medtrix_device_push_token', token);
+        return { error: null };
+      } catch (e) {
+        return { error: e };
+      }
+    }
+
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user) return { error: new Error('No user session') };
+
+    const { error } = await supabase
+      .from('user_push_tokens')
+      .upsert(
+        {
+          user_id: user.user.id,
+          expo_push_token: token,
+          device_name: deviceName || null,
+          device_platform: platform || 'unknown',
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,expo_push_token' }
+      );
+
+    return { error };
+  },
+
+  async removePushToken(token: string): Promise<{ error: any }> {
+    if (process.env.EXPO_PUBLIC_SUPABASE_URL === 'https://your-project-ref.supabase.co') {
+      try {
+        await AsyncStorage.removeItem('@medtrix_device_push_token');
+        return { error: null };
+      } catch (e) {
+        return { error: e };
+      }
+    }
+
+    const { error } = await supabase
+      .from('user_push_tokens')
+      .update({ is_active: false })
+      .eq('expo_push_token', token);
+
+    return { error };
   },
 
   async updateInventoryQuantity(batchId: string, transactionType: 'received' | 'dispensed', quantityChange: number, currentQuantity: number) {

@@ -369,6 +369,19 @@ export default function LoginScreen() {
               </View>
             </TouchableOpacity>
 
+            {/* Quick Demo Credentials */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.demoLoginButton}
+              onPress={() => {
+                setEmail('admin@medtrix.health');
+                setPassword('Medtrix2026!');
+              }}
+            >
+              <Ionicons name="key-outline" size={15} color={COLORS.brand.primary} />
+              <Text style={styles.demoLoginText}>Fill Demo Credentials (admin@medtrix.health)</Text>
+            </TouchableOpacity>
+
             {/* ==================================================
                 SECURITY NOTE
             ================================================== */}
@@ -959,5 +972,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.brand.primary,
     marginLeft: 5,
+  },
+  demoLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 10,
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    borderRadius: 10,
+    gap: 6,
+  },
+  demoLoginText: {
+    ...TYPOGRAPHY.bodyMedium,
+    fontSize: 12.5,
+    color: COLORS.brand.primary,
   },
 });

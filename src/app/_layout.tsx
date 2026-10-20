@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -19,17 +19,49 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_700Bold,
 } from '@expo-google-fonts/jetbrains-mono';
-import { LogBox, View, StyleSheet } from 'react-native';
-import { Auth } from '../supabase';
+import { LogBox, View, StyleSheet, Platform } from 'react-native';
 import { initI18n } from '../i18n';
 import FloatingAssistant from '../components/FloatingAssistant';
 import { ThemeProvider } from '../context/ThemeContext';
-SplashScreen.preventAutoHideAsync();
+import { NotificationService } from '../services/notificationService';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 LogBox.ignoreLogs([
   "Can't perform a React state update on a component that hasn't mounted yet",
   "Animated: `useNativeDriver` is not supported",
+  '"shadow*" style props are deprecated',
+  'props.pointerEvents is deprecated',
+  '[expo-notifications]',
+  'expo-notifications',
+  'Push notifications (remote notifications) are unavailable in Expo Go',
+  'Could not fetch Expo push token',
+  'functionality is not fully supported in Expo Go',
+  'is missing the required default export',
 ]);
+
+// Clean console output by filtering library-level notices and transient bundler logs
+if (typeof console !== 'undefined') {
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    const msg = typeof args[0] === 'string' ? args[0] : '';
+    if (
+      msg.includes('"shadow*" style props are deprecated') ||
+      msg.includes('props.pointerEvents is deprecated') ||
+      msg.includes('[expo-notifications] Listening to push token changes') ||
+      msg.includes('[expo-notifications] Push notifications (remote notifications) are unavailable in Expo Go') ||
+      msg.includes('is missing the required default export') ||
+      msg.includes('expo-notifications` functionality is not fully supported in Expo Go')
+    ) {
+      return;
+    }
+    originalWarn(...args);
+  };
+}
+
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -52,36 +84,42 @@ export default function RootLayout() {
     JetBrainsMono_700Bold,
   });
 
-  const [authChecked, setAuthChecked] = useState(false);
+  const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    async function checkAuthAndRoute() {
-      if (!loaded && !error) return; // Wait until fonts load
-      
+    async function prepare() {
       try {
         await initI18n();
-        const user = await Auth.getCurrentUser();
-        if (!user) {
-          router.replace('/auth/login');
-        }
       } catch (err) {
-        console.error('Error during initial check:', err);
+        console.error('Error during initial setup:', err);
       } finally {
-        setAuthChecked(true);
-        SplashScreen.hideAsync();
+        setAppIsReady(true);
       }
     }
-    
-    checkAuthAndRoute();
-  }, [loaded, error]);
+    prepare();
+
+    const cleanup = NotificationService.initializeListeners();
+    // Attempt push token registration on mobile devices if permission is already granted
+    if (Platform.OS !== 'web') {
+      NotificationService.checkPermissions().then(({ granted }) => {
+        if (granted) {
+          NotificationService.registerForPushNotificationsAsync().catch(() => {});
+        }
+      });
+    }
+
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   useEffect(() => {
-    if (loaded && authChecked) {
-      setTimeout(() => router.replace('/(tabs)'), 0);
+    if ((loaded || error) && appIsReady) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [loaded, authChecked]);
+  }, [loaded, error, appIsReady]);
 
-  if (!loaded || !authChecked) {
+  if ((!loaded && !error) || !appIsReady) {
     return null;
   }
 
@@ -92,7 +130,23 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
           }}
-        />
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+          <Stack.Screen name="splash" options={{ headerShown: false }} />
+          <Stack.Screen name="checkout" options={{ headerShown: false }} />
+          <Stack.Screen name="bulk-import" options={{ headerShown: false }} />
+          <Stack.Screen name="clinical-triage" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/ai-triage" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/hospital" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/language" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/personal-info" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/security" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+        </Stack>
         <FloatingAssistant />
       </View>
     </ThemeProvider>

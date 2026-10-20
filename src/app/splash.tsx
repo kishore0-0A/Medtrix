@@ -4,12 +4,14 @@ import {
   Dimensions,
   Easing,
 
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Auth } from '../supabase';
 import {
   Ionicons,
   MaterialCommunityIcons,
@@ -442,8 +444,17 @@ export default function SplashScreen() {
      LOGIN
   ---------------------------------------------------------- */
 
-  const goToLogin = () => {
-    router.replace('/auth/login');
+  const goToLogin = async () => {
+    try {
+      const user = await Auth.getCurrentUser();
+      if (user) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/auth/login');
+      }
+    } catch {
+      router.replace('/auth/login');
+    }
   };
 
   /* ==========================================================
@@ -934,6 +945,7 @@ export default function SplashScreen() {
       mounted = false;
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ==========================================================
@@ -1398,6 +1410,20 @@ export default function SplashScreen() {
         </Animated.View>
 
       </View>
+
+      {/* Skip Button */}
+      <Pressable
+        onPress={goToLogin}
+        accessibilityRole="button"
+        accessibilityLabel="Skip Intro"
+        style={({ pressed }) => [
+          styles.skipButton,
+          pressed && styles.skipButtonPressed,
+        ]}
+      >
+        <Text style={styles.skipText}>SKIP</Text>
+        <Ionicons name="arrow-forward" size={10} color={COLORS.textSoft} />
+      </Pressable>
 
       {/* ======================================================
           EXIT TRANSITION

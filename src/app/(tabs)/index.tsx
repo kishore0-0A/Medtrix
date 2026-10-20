@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
 import {
   Animated,
@@ -10,10 +10,11 @@ import {
   StyleSheet,
   Text,
   View,
+  RefreshControl,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -22,6 +23,9 @@ import {
 } from '@expo/vector-icons';
 import { useThemeContext } from '../../context/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
+import { Database, InventoryItem } from '../../supabase/database';
+import { NotificationService } from '../../services/notificationService';
+
 
 
 
@@ -70,37 +74,6 @@ const COLORS = {
 };
 
 /* ============================================================
-   TEMPORARY HOME DATA
-   Later these can come from Supabase.
-============================================================ */
-
-const inventorySummary = {
-  totalMedicines: '1,248',
-  lowStock: '24',
-  expiringSoon: '18',
-  outOfStock: '07',
-};
-
-const attentionItems = [
-  {
-    name: 'Low stock medicines',
-    value: '24',
-    description: 'Medicines need restocking',
-    icon: 'warning-outline' as const,
-    color: COLORS.warning,
-    background: COLORS.warningSoft,
-  },
-  {
-    name: 'Expiring soon',
-    value: '18',
-    description: 'Batches within 30 days',
-    icon: 'time-outline' as const,
-    color: COLORS.orange,
-    background: COLORS.orangeSoft,
-  },
-];
-
-/* ============================================================
    TYPES
 ============================================================ */
 
@@ -113,6 +86,137 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { isDark } = useThemeContext();
+
+  /* ----------------------------------------------------------
+     Authentic clinical state & real-time notification sync
+  ---------------------------------------------------------- */
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const loadDashboardData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const [invRes, txRes, count] = await Promise.all([
+        Database.getInventory(),
+        Database.getInventoryTransactions(),
+        Database.getUnreadNotificationCount(),
+      ]);
+
+      if (invRes.data) {
+        setInventory(invRes.data);
+      }
+      if (txRes.data) {
+        setTransactions(txRes.data);
+      }
+      setUnreadCount(count);
+    } catch (err) {
+      console.warn('Dashboard data fetch error:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [loadDashboardData])
+  );
+
+  useEffect(() => {
+    const unsubscribe = NotificationService.addChangeListener(() => {
+      Database.getUnreadNotificationCount().then(setUnreadCount);
+      Database.getInventory().then((res) => {
+        if (res.data) setInventory(res.data);
+      });
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Compute authentic clinical metrics
+  const metrics = useMemo(() => {
+    const totalMedicines = inventory.length;
+    const totalUnits = inventory.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+    const lowStock = inventory.filter(
+      (item) => item.status === 'low' || (item.quantity > 0 && item.quantity < 20)
+    ).length;
+    const expiringSoon = inventory.filter((item) => item.status === 'expiring').length;
+    const outOfStock = inventory.filter(
+      (item) => item.status === 'critical' || item.quantity === 0
+    ).length;
+
+    return {
+      totalMedicines: totalMedicines > 0 ? totalMedicines.toLocaleString() : '0',
+      totalUnits: totalUnits.toLocaleString(),
+      lowStock: String(lowStock).padStart(2, '0'),
+      expiringSoon: String(expiringSoon).padStart(2, '0'),
+      outOfStock: String(outOfStock).padStart(2, '0'),
+    };
+  }, [inventory]);
+
+  // Compute dynamic attention items from genuine inventory state
+  const dynamicAttentionItems = useMemo(() => {
+    const items: {
+      name: string;
+      value: string;
+      description: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      color: string;
+      background: string;
+      route?: string;
+    }[] = [];
+
+    const lowStockItems = inventory.filter(
+      (i) => i.status === 'low' || (i.quantity > 0 && i.quantity < 20)
+    );
+    const expiringItems = inventory.filter((i) => i.status === 'expiring');
+    const criticalItems = inventory.filter((i) => i.status === 'critical' || i.quantity === 0);
+
+    if (lowStockItems.length > 0) {
+      items.push({
+        name: `${lowStockItems[0].name} (Low)`,
+        value: `${lowStockItems[0].quantity} left`,
+        description: `${lowStockItems.length} medicine${
+          lowStockItems.length > 1 ? 's' : ''
+        } below safe buffer threshold`,
+        icon: 'warning-outline',
+        color: COLORS.warning,
+        background: COLORS.warningSoft,
+        route: '/inventory',
+      });
+    }
+
+    if (expiringItems.length > 0) {
+      items.push({
+        name: `${expiringItems[0].name} (Expiring)`,
+        value: expiringItems[0].expiryDate || '30 days',
+        description: `${expiringItems.length} batch${
+          expiringItems.length > 1 ? 'es' : ''
+        } approaching expiry date`,
+        icon: 'time-outline',
+        color: COLORS.orange,
+        background: COLORS.orangeSoft,
+        route: '/alerts',
+      });
+    }
+
+    if (criticalItems.length > 0) {
+      items.push({
+        name: `${criticalItems[0].name} (Critical)`,
+        value: '0 units',
+        description: 'Critical clinical supply breach',
+        icon: 'alert-circle-outline',
+        color: COLORS.critical,
+        background: COLORS.criticalSoft,
+        route: '/inventory',
+      });
+    }
+
+    return items;
+  }, [inventory]);
   /* ----------------------------------------------------------
      Entrance animations
   ---------------------------------------------------------- */
@@ -297,6 +401,13 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadDashboardData(true)}
+            tintColor={isDark ? '#60A5FA' : COLORS.primary}
+          />
+        }
       >
         {/* ===================================================
             HEADER
@@ -348,7 +459,7 @@ export default function HomeScreen() {
                 },
               ]}
               onPress={() =>
-                handleNavigation('/notifications')
+                handleNavigation('/profile/notifications')
               }
             >
               <Ionicons
@@ -357,7 +468,13 @@ export default function HomeScreen() {
                 color={isDark ? '#FFFFFF' : COLORS.text}
               />
 
-              <View style={styles.notificationDot} />
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </Animated.View>
@@ -592,11 +709,11 @@ export default function HomeScreen() {
                 </Text>
 
                 <Text style={[styles.inventoryValue, isDark && { color: '#60A5FA' }]}>
-                  {inventorySummary.totalMedicines}
+                  {metrics.totalMedicines}
                 </Text>
 
                 <Text style={[styles.inventorySubtitle, isDark && { color: '#94A3B8' }]}>
-                  Medicines currently in inventory
+                  {metrics.totalUnits} units tracked in inventory
                 </Text>
               </View>
 
@@ -615,7 +732,7 @@ export default function HomeScreen() {
 
             <View style={styles.inventoryMetrics}>
               <MiniMetric
-                value={inventorySummary.lowStock}
+                value={metrics.lowStock}
                 label="Low stock"
                 color={COLORS.warning}
                 background={COLORS.warningSoft}
@@ -624,7 +741,7 @@ export default function HomeScreen() {
               <View style={styles.metricDivider} />
 
               <MiniMetric
-                value={inventorySummary.expiringSoon}
+                value={metrics.expiringSoon}
                 label="Expiring soon"
                 color={COLORS.orange}
                 background={COLORS.orangeSoft}
@@ -633,7 +750,7 @@ export default function HomeScreen() {
               <View style={styles.metricDivider} />
 
               <MiniMetric
-                value={inventorySummary.outOfStock}
+                value={metrics.outOfStock}
                 label="Out of stock"
                 color={COLORS.critical}
                 background={COLORS.criticalSoft}
@@ -662,65 +779,159 @@ export default function HomeScreen() {
           />
 
           <View style={[styles.attentionCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
-            {attentionItems.map((item, index) => (
-              <Pressable
-                key={item.name}
-                style={({ pressed }) => [
-                  styles.attentionRow,
-                  index ===
-                    attentionItems.length - 1 &&
-                    styles.lastRow,
-                  pressed && styles.rowPressed,
-                ]}
-                onPress={() =>
-                  handleNavigation('/alerts')
-                }
-              >
-                <View
-                  style={[
-                    styles.attentionIcon,
-                    {
-                      backgroundColor: isDark ? 'rgba(37, 99, 235, 0.16)' : item.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={item.icon}
-                    size={18}
-                    color={isDark ? '#60A5FA' : item.color}
-                  />
+            {dynamicAttentionItems.length === 0 ? (
+              <View style={styles.healthyStateContainer}>
+                <View style={styles.healthyStateIcon}>
+                  <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
                 </View>
-
-                <View style={styles.attentionContent}>
+                <View style={{ flex: 1 }}>
                   <Text style={[styles.attentionTitle, isDark && { color: '#FFFFFF' }]}>
-                    {item.name}
+                    All Stock Levels Optimal
                   </Text>
-
                   <Text style={[styles.attentionDescription, isDark && { color: '#CBD5E1' }]}>
-                    {item.description}
+                    No medicines currently require restocking or expiry quarantine.
                   </Text>
                 </View>
-
-                <View style={styles.attentionRight}>
-                  <Text
+              </View>
+            ) : (
+              dynamicAttentionItems.map((item, index) => (
+                <Pressable
+                  key={item.name + index}
+                  style={({ pressed }) => [
+                    styles.attentionRow,
+                    index === dynamicAttentionItems.length - 1 && styles.lastRow,
+                    pressed && styles.rowPressed,
+                  ]}
+                  onPress={() => handleNavigation(item.route || '/alerts')}
+                >
+                  <View
                     style={[
-                      styles.attentionValue,
+                      styles.attentionIcon,
                       {
-                        color: isDark ? '#60A5FA' : item.color,
+                        backgroundColor: isDark ? 'rgba(37, 99, 235, 0.16)' : item.background,
                       },
                     ]}
                   >
-                    {item.value}
-                  </Text>
+                    <Ionicons
+                      name={item.icon}
+                      size={18}
+                      color={isDark ? '#60A5FA' : item.color}
+                    />
+                  </View>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={isDark ? '#CBD5E1' : COLORS.textLight}
-                  />
+                  <View style={styles.attentionContent}>
+                    <Text style={[styles.attentionTitle, isDark && { color: '#FFFFFF' }]}>
+                      {item.name}
+                    </Text>
+
+                    <Text style={[styles.attentionDescription, isDark && { color: '#CBD5E1' }]}>
+                      {item.description}
+                    </Text>
+                  </View>
+
+                  <View style={styles.attentionRight}>
+                    <Text
+                      style={[
+                        styles.attentionValue,
+                        {
+                          color: isDark ? '#60A5FA' : item.color,
+                        },
+                      ]}
+                    >
+                      {item.value}
+                    </Text>
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={isDark ? '#CBD5E1' : COLORS.textLight}
+                    />
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </View>
+        </Animated.View>
+
+        {/* ===================================================
+            RECENT CLINICAL ACTIVITY
+        =================================================== */}
+
+        <Animated.View
+          style={[
+            styles.section,
+            getTransform(attentionAnim),
+          ]}
+        >
+          <SectionHeader
+            title="Recent Stock Activity"
+            subtitle="Verified movements & transactions"
+            action="View inventory"
+            onAction={() => handleNavigation('/inventory')}
+          />
+
+          <View style={[styles.attentionCard, isDark && { backgroundColor: '#0D1117', borderColor: '#1E293B' }]}>
+            {transactions.slice(0, 3).map((tx, idx) => {
+              const isReceived = tx.transaction_type === 'received';
+              const medName = tx.medicine_batches?.medicines?.name || 'Medicine Batch';
+              return (
+                <View
+                  key={tx.id || idx}
+                  style={[
+                    styles.attentionRow,
+                    idx === Math.min(transactions.length, 3) - 1 && styles.lastRow,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.attentionIcon,
+                      {
+                        backgroundColor: isReceived
+                          ? isDark
+                            ? 'rgba(16, 185, 129, 0.16)'
+                            : COLORS.successSoft
+                          : isDark
+                          ? 'rgba(37, 99, 235, 0.16)'
+                          : COLORS.primarySoft,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={isReceived ? 'arrow-down-circle-outline' : 'arrow-up-circle-outline'}
+                      size={18}
+                      color={isReceived ? COLORS.success : COLORS.primary}
+                    />
+                  </View>
+
+                  <View style={styles.attentionContent}>
+                    <Text style={[styles.attentionTitle, isDark && { color: '#FFFFFF' }]}>
+                      {medName}
+                    </Text>
+
+                    <Text style={[styles.attentionDescription, isDark && { color: '#CBD5E1' }]}>
+                      {isReceived ? 'Received into clinical stock' : 'Dispensed for patient'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.attentionRight}>
+                    <Text
+                      style={[
+                        styles.attentionValue,
+                        {
+                          color: isReceived
+                            ? COLORS.success
+                            : isDark
+                            ? '#60A5FA'
+                            : COLORS.primary,
+                        },
+                      ]}
+                    >
+                      {isReceived ? `+${tx.quantity}` : `-${tx.quantity}`}
+                    </Text>
+                  </View>
                 </View>
-              </Pressable>
-            ))}
+              );
+            })}
           </View>
         </Animated.View>
 
@@ -989,16 +1200,36 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  notificationDot: {
+  notificationBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: COLORS.critical,
     borderWidth: 1.5,
     borderColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontFamily: 'Jakarta-Bold',
+    textAlign: 'center',
+  },
+
+  healthyStateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+
+  healthyStateIcon: {
+    marginRight: 12,
   },
 
   /* ==========================================================

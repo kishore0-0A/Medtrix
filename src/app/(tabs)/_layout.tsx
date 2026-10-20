@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
-import { Tabs } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions, ActivityIndicator } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { COLORS, TYPOGRAPHY } from '../../theme';
 import { useThemeContext } from '../../context/ThemeContext';
+import { Auth } from '../../supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -122,6 +123,54 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const { isDark } = useThemeContext();
+  const [checkingAuth, setCheckingAuth] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await Auth.getCurrentUser();
+        if (mounted) {
+          setIsAuthenticated(!!user);
+          setCheckingAuth(false);
+        }
+      } catch {
+        if (mounted) {
+          setIsAuthenticated(false);
+          setCheckingAuth(false);
+        }
+      }
+    })();
+
+    const sub = Auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setIsAuthenticated(!!session?.user);
+        setCheckingAuth(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      if (sub && typeof sub.unsubscribe === 'function') {
+        sub.unsubscribe();
+      }
+    };
+  }, []);
+
+  if (checkingAuth) {
+    return (
+      <View style={[styles.loadingContainer, isDark && { backgroundColor: '#000000' }]}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -225,5 +274,11 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10.5,
     marginTop: 3,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
   },
 });
